@@ -226,7 +226,7 @@ The user is viewing an individual, publication-ready analytics report for datase
     if any(w in q for w in ["summary", "summarize", "overview", "takeaway", "about", "what is this"]):
         corr_text = f"Top correlation detected between **{corrs[0]['feature_1']}** and **{corrs[0]['feature_2']}** (r = **{corrs[0]['pearson_r']}**)." if corrs else "Features show largely independent variance."
         return (
-            f"### 📋 Executive Summary — **{dataset}**\n\n"
+            f"### Executive Summary — **{dataset}**\n\n"
             f"- **Data Scale:** Profiled **{rows}** observations across **{cols}** attributes.\n"
             f"- **Data Health Index:** **{quality}%** (reconciled, verified, and cleaned).\n"
             f"- **Predictive Intelligence:** Deployed **{model}** as champion model ({metric_label}: **{metric_val}**).\n"
@@ -237,7 +237,7 @@ The user is viewing an individual, publication-ready analytics report for datase
     # Model / Machine Learning inquiry
     if any(w in q for w in ["model", "ml", "predict", "accuracy", "algorithm", "champion", "r2", "f1", "metric"]):
         return (
-            f"### 🤖 Champion Machine Learning Model: **{model}**\n\n"
+            f"### Champion Machine Learning Model: **{model}**\n\n"
             f"- **Architecture:** **{model}** was evaluated and deployed as the top predictive performer.\n"
             f"- **Champion Metric:** {metric_label} achieved **{metric_val}**.\n"
             f"- **Production Readiness:** Deployed with cross-validation and hyperparameter tuning.\n"
@@ -247,7 +247,7 @@ The user is viewing an individual, publication-ready analytics report for datase
     # Data Quality / Cleaning inquiry
     if any(w in q for w in ["quality", "clean", "health", "missing", "null", "audit", "outlier"]):
         return (
-            f"### ✨ Data Quality & Health Audit\n\n"
+            f"### Data Quality & Health Audit\n\n"
             f"- **Overall Health Score:** **{quality}%** (Grade A)\n"
             f"- **Reconciliation:** Multi-agent pipeline performed automated type inference, missing value imputation, and anomaly filtering.\n"
             f"- **Integrity:** Ready for compliant executive reporting and business intelligence integration."
@@ -258,7 +258,7 @@ The user is viewing an individual, publication-ready analytics report for datase
         if corrs:
             items = [f"- **{c['feature_1']}** ↔ **{c['feature_2']}**: Pearson r = **{c['pearson_r']}**" for c in corrs]
             return (
-                f"### 🎯 Discovered Feature Correlations in **{dataset}**\n\n"
+                f"### Discovered Feature Correlations in **{dataset}**\n\n"
                 + "\n".join(items) +
                 "\n\n*Strong correlations highlight key business drivers and predictive interactions.*"
             )
@@ -267,7 +267,7 @@ The user is viewing an individual, publication-ready analytics report for datase
     # Recommendations / Next steps
     if any(w in q for w in ["recommend", "action", "next step", "advice", "strategy", "decision"]):
         return (
-            f"### 💡 Strategic Executive Recommendations\n\n"
+            f"### Strategic Executive Recommendations\n\n"
             f"1. **Operationalize {model}:** Integrate model predictions ({metric_label}: **{metric_val}**) into recurring workflows.\n"
             f"2. **Monitor Feature Variance:** Regularly audit the top {cols} features to avoid distribution drift.\n"
             f"3. **Targeted Optimization:** Leverage identified key drivers to optimize decision-making.\n"
@@ -742,25 +742,25 @@ def inject_report_copilot_widget(html_content: str, report_id: str) -> str:
                             <span class="report-msg-sender">DataMind Report Copilot</span>
                         </div>
                         <div class="report-msg-bubble">
-                            <p>👋 Hello! I'm your <strong>Report Copilot</strong> for this <strong>{dataset_name}</strong> report.</p>
+                            <p>Hello! I'm your <strong>Report Copilot</strong> for this <strong>{dataset_name}</strong> report.</p>
                             <div class="report-mini-kpis">
-                                <span class="mini-kpi">📊 <strong>{total_rows}</strong> rows × <strong>{total_columns}</strong> cols</span>
-                                <span class="mini-kpi">✨ Health: <strong>{quality_score}%</strong></span>
-                                <span class="mini-kpi">🤖 Model: <strong>{best_model}</strong></span>
+                                <span class="mini-kpi"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -2px; margin-right: 4px;"><path d="M3 3v18h18"></path><rect width="4" height="7" x="7" y="10" rx="1"></rect><rect width="4" height="12" x="15" y="5" rx="1"></rect></svg><strong>{total_rows}</strong> rows × <strong>{total_columns}</strong> cols</span>
+                                <span class="mini-kpi"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -2px; margin-right: 4px;"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"></path></svg>Health: <strong>{quality_score}%</strong></span>
+                                <span class="mini-kpi"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -2px; margin-right: 4px;"><rect width="16" height="16" x="4" y="4" rx="2"></rect><rect width="6" height="6" x="9" y="9" rx="1"></rect><path d="M15 2v2"></path><path d="M15 20v2"></path><path d="M2 15h2"></path><path d="M2 9h2"></path><path d="M20 15h2"></path><path d="M20 9h2"></path><path d="M9 2v2"></path><path d="M9 20v2"></path></svg>Model: <strong>{best_model}</strong></span>
                             </div>
                             <p style="margin-top: 8px;">Ask me any question about findings, ML predictions, or correlations in this report:</p>
                             <div class="report-chips-row">
                                 <button class="report-chip" onclick="askReportCopilot('Summarize this executive report')">
-                                    📋 Summarize report
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -2px; margin-right: 4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" x2="8" y1="13" y2="13"></line><line x1="16" x2="8" y1="17" y2="17"></line></svg>Summarize report
                                 </button>
                                 <button class="report-chip" onclick="askReportCopilot('Explain the machine learning model results')">
-                                    🤖 Explain ML model
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -2px; margin-right: 4px;"><rect width="16" height="16" x="4" y="4" rx="2"></rect><rect width="6" height="6" x="9" y="9" rx="1"></rect><path d="M15 2v2"></path><path d="M15 20v2"></path><path d="M2 15h2"></path><path d="M2 9h2"></path><path d="M20 15h2"></path><path d="M20 9h2"></path><path d="M9 2v2"></path><path d="M9 20v2"></path></svg>Explain ML model
                                 </button>
                                 <button class="report-chip" onclick="askReportCopilot('What are the key correlations found in the data?')">
-                                    🎯 Key correlations
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -2px; margin-right: 4px;"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>Key correlations
                                 </button>
                                 <button class="report-chip" onclick="askReportCopilot('What strategic recommendations do you have?')">
-                                    💡 Recommendations
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -2px; margin-right: 4px;"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"></path><path d="M9 18h6"></path><path d="M10 22h4"></path></svg>Recommendations
                                 </button>
                             </div>
                         </div>
@@ -861,11 +861,17 @@ def inject_report_copilot_widget(html_content: str, report_id: str) -> str:
                             <span class="report-msg-sender">DataMind Report Copilot</span>
                         </div>
                         <div class="report-msg-bubble">
-                            <p>👋 Conversation reset! I'm ready for any questions regarding this executive report.</p>
+                            <p>Conversation reset. I'm ready for any questions regarding this executive report.</p>
                             <div class="report-chips-row">
-                                <button class="report-chip" onclick="askReportCopilot('Summarize this executive report')">📋 Summarize report</button>
-                                <button class="report-chip" onclick="askReportCopilot('Explain the machine learning model results')">🤖 Explain ML model</button>
-                                <button class="report-chip" onclick="askReportCopilot('What strategic recommendations do you have?')">💡 Recommendations</button>
+                                <button class="report-chip" onclick="askReportCopilot('Summarize this executive report')">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -2px; margin-right: 4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" x2="8" y1="13" y2="13"></line><line x1="16" x2="8" y1="17" y2="17"></line></svg>Summarize report
+                                </button>
+                                <button class="report-chip" onclick="askReportCopilot('Explain the machine learning model results')">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -2px; margin-right: 4px;"><rect width="16" height="16" x="4" y="4" rx="2"></rect><rect width="6" height="6" x="9" y="9" rx="1"></rect><path d="M15 2v2"></path><path d="M15 20v2"></path><path d="M2 15h2"></path><path d="M2 9h2"></path><path d="M20 15h2"></path><path d="M20 9h2"></path><path d="M9 2v2"></path><path d="M9 20v2"></path></svg>Explain ML model
+                                </button>
+                                <button class="report-chip" onclick="askReportCopilot('What strategic recommendations do you have?')">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -2px; margin-right: 4px;"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"></path><path d="M9 18h6"></path><path d="M10 22h4"></path></svg>Recommendations
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -956,7 +962,7 @@ def inject_report_copilot_widget(html_content: str, report_id: str) -> str:
             }} catch (err) {{
                 const loadEl = document.getElementById('report-loading');
                 if (loadEl) loadEl.remove();
-                appendReportMessage('assistant', '⚠️ Unable to query report context: ' + err.message);
+                appendReportMessage('assistant', 'Unable to query report context: ' + err.message);
             }} finally {{
                 isReportProcessing = false;
                 reportSendBtn.disabled = false;
