@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Environment
+.env
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Data (keep structure, ignore user data)
+data/uploads/*
+data/processed/*
+data/reports/*
+data/models/*
+!data/uploads/.gitkeep
+!data/processed/.gitkeep
+!data/reports/.gitkeep
+!data/models/.gitkeep
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Models & Binaries
+/models/
+*.gguf
+*.bin
+*.exe
+llamafile*
+
+# Logs
+*.log
+logs/
