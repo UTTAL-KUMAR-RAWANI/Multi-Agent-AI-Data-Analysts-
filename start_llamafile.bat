@@ -1,5 +1,5 @@
 @echo off
-echo Starting Llamafile server for DataMind AI...
+echo Starting Llamafile server for DataWhale AI...
 echo Model: models\qwen2.5-3b-instruct-q4_k_m.gguf
 echo Endpoint: http://127.0.0.1:8080/v1
 echo Press Ctrl+C to stop.

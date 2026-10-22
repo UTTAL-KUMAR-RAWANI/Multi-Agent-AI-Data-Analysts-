@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}DataMind AI — Dashboard{% endblock %}
+{% block title %}DataWhale AI — Dashboard{% endblock %}
 {% block page_title %}Dashboard{% endblock %}
 
 {% block top_actions %}
@@ -226,7 +226,7 @@
                     </div>
                     <div class="copilot-msg-content">
                         <div class="copilot-msg-header">
-                            <span class="copilot-msg-sender">DataMind Copilot</span>
+                            <span class="copilot-msg-sender">DataWhale Copilot</span>
                         </div>
                         <div class="copilot-msg-bubble">
                             <p>Hello! I'm your <strong>Dashboard Copilot</strong>. I have real-time visibility into all <strong>{{ datasets | length }} loaded datasets</strong>, system health, and the 9 specialized AI agents.</p>
@@ -380,7 +380,7 @@
                 </div>
                 <div class="copilot-msg-content">
                     <div class="copilot-msg-header">
-                        <span class="copilot-msg-sender">DataMind Copilot</span>
+                        <span class="copilot-msg-sender">DataWhale Copilot</span>
                     </div>
                     <div class="copilot-msg-bubble">
                         <p>Conversation reset. I'm ready for any question about your dashboard, datasets, or AI specialists.</p>
@@ -450,7 +450,7 @@
             </div>
             <div class="copilot-msg-content">
                 <div class="copilot-msg-header">
-                    <span class="copilot-msg-sender">DataMind Copilot</span>
+                    <span class="copilot-msg-sender">DataWhale Copilot</span>
                 </div>
                 <div class="copilot-msg-bubble">
                     <div class="typing-indicator" style="display: flex; gap: 4px; padding: 4px 0;">
@@ -476,7 +476,7 @@
         div.className = `copilot-msg ${role}`;
 
         const avatarIcon = role === 'user' ? 'user' : 'brain-circuit';
-        const sender = role === 'user' ? 'You' : 'DataMind Copilot';
+        const sender = role === 'user' ? 'You' : 'DataWhale Copilot';
         const formattedBody = role === 'user'
             ? `<p>${rawContent.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>`
             : formatMarkdown(rawContent);

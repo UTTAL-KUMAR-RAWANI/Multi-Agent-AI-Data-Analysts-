@@ -1,6 +1,6 @@
-# 🔌 DataMind AI — Model Context Protocol (MCP) Integration Guide
+# 🔌 DataWhale AI — Model Context Protocol (MCP) Integration Guide
 
-DataMind AI natively implements the **Model Context Protocol (MCP)** standard (v2.x). Any MCP-compliant client (including **Claude Desktop**, **Cursor**, and **VS Code Copilot**) can directly access DataMind's suite of specialized data analyst tools and multi-agent workflows.
+DataWhale AI natively implements the **Model Context Protocol (MCP)** standard (v2.x). Any MCP-compliant client (including **Claude Desktop**, **Cursor**, and **VS Code Copilot**) can directly access DataWhale's suite of specialized data analyst tools and multi-agent workflows.
 
 ---
 
@@ -30,7 +30,7 @@ Add the following configuration to your Claude Desktop config file:
 ```json
 {
   "mcpServers": {
-    "datamind": {
+    "datawhale": {
       "command": "python",
       "args": [
         "-m",
@@ -42,7 +42,7 @@ Add the following configuration to your Claude Desktop config file:
 }
 ```
 
-Restart Claude Desktop. You will see the hammer icon 🔨 with all DataMind analytics tools ready to call.
+Restart Claude Desktop. You will see the hammer icon 🔨 with all DataWhale analytics tools ready to call.
 
 ---
 
@@ -51,7 +51,7 @@ Restart Claude Desktop. You will see the hammer icon 🔨 with all DataMind anal
 In Cursor:
 1. Open **Settings** → **Features** → **MCP Servers**.
 2. Click **Add New MCP Server**.
-3. Name: `datamind`
+3. Name: `datawhale`
 4. Type: `command`
 5. Command: `python -m src.mcp_server.server`
 6. Working Directory: `C:\ai data analysts`

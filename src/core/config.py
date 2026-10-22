@@ -1,5 +1,5 @@
 """
-DataMind AI - Configuration Management
+DataWhale AI - Configuration Management
 
 Centralized settings using pydantic-settings. Loads from .env file
 and supports multiple LLM providers with model tiering.

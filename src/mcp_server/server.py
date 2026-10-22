@@ -1,7 +1,7 @@
 """
-DataMind AI - Model Context Protocol (MCP) Server
+DataWhale AI - Model Context Protocol (MCP) Server
 
-Exposes DataMind AI's data analytics, machine learning, and multi-agent
+Exposes DataWhale AI's data analytics, machine learning, and multi-agent
 workflow as standardized MCP tools. Compatible with Claude Desktop, Cursor,
 VS Code Copilot, and any MCP client.
 """
@@ -41,13 +41,13 @@ from src.graph.workflow import run_analysis_workflow
 logger = logging.getLogger(__name__)
 
 # Initialize MCP Server instance
-mcp_server = MCPServer("datamind-analytics")
+mcp_server = MCPServer("datawhale-analytics")
 
 
 @mcp_server.tool()
 def load_dataset(file_path: str) -> str:
     """
-    Load a CSV, Excel, or JSON dataset into the DataMind workspace.
+    Load a CSV, Excel, or JSON dataset into the DataWhale workspace.
 
     Args:
         file_path: Absolute or relative path to the data file.
@@ -80,7 +80,7 @@ def describe_dataset(dataset_id: str) -> str:
 @mcp_server.tool()
 def list_available_datasets() -> str:
     """
-    List all currently loaded datasets in the DataMind workspace.
+    List all currently loaded datasets in the DataWhale workspace.
     """
     datasets = _list_datasets()
     return json.dumps([

@@ -34,7 +34,7 @@ STATIC_DIR = WEB_DIR / "static"
 
 # FastAPI app
 app = FastAPI(
-    title="DataMind AI",
+    title="DataWhale AI",
     description="Multi-Agent AI Data Analysis Platform",
     version="0.1.0",
 )
@@ -207,7 +207,7 @@ async def startup():
     settings.get_processed_path()
     settings.get_reports_path()
     logger.info("=" * 60)
-    logger.info("  DataMind AI — Multi-Agent Data Analysis Platform")
+    logger.info("  DataWhale AI — Multi-Agent Data Analysis Platform")
     logger.info("=" * 60)
     logger.info(f"  Available LLM providers: {[p.value for p in settings.available_providers]}")
     logger.info(f"  Default provider: {settings.default_llm_provider.value}")

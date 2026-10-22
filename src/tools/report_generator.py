@@ -279,7 +279,7 @@ def build_bi_insights(
 
     interpretation_note = (
         "District and record averages shown here are unweighted (each observation counts equally). "
-        "Correlation does not establish causation. All calculations and model validations verified by DataMind Multi-Agent QA."
+        "Correlation does not establish causation. All calculations and model validations verified by DataWhale Multi-Agent QA."
     )
 
     return insights[:3], interpretation_note

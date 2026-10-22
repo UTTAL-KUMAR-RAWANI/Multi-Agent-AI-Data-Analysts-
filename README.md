@@ -1,6 +1,6 @@
-# 🧠 DataMind AI — Multi-Agent AI Data Analysis Platform with MCP Integration
+# 🐋 DataWhale AI — Multi-Agent AI Data Analysis Platform with MCP Integration
 
-> **DataMind AI** is an intelligent, autonomous multi-agent data analytics platform that performs the full workflow of a professional data analytics and data science team: data hygiene, exploratory profiling, inferential hypothesis testing, machine learning modeling, interactive visual storytelling, and executive report publishing.
+> **DataWhale AI** is an intelligent, autonomous multi-agent data analytics platform that performs the full workflow of a professional data analytics and data science team: data hygiene, exploratory profiling, inferential hypothesis testing, machine learning modeling, interactive visual storytelling, and executive report publishing.
 >
 > Built with **LangGraph**, **FastAPI**, **DuckDB**, **Plotly**, and official **Model Context Protocol (MCP)** server integration.
 
@@ -18,7 +18,7 @@
   - **Report Writer Agent:** Generates publication-ready executive HTML and PDF reports with embedded charts and audit logs.
   - **QA Agent:** Audits agent outputs for statistical validity, target leakage, and numerical integrity before results reach the user.
 
-- **🔌 Native MCP Server Platform:** Exposes all 9 core analysis tools via the Model Context Protocol, allowing **Claude Desktop**, **Cursor**, or **VS Code** to directly invoke DataMind on local datasets.
+- **🔌 Native MCP Server Platform:** Exposes all 9 core analysis tools via the Model Context Protocol, allowing **Claude Desktop**, **Cursor**, or **VS Code** to directly invoke DataWhale on local datasets.
 - **⚡ Blazing Fast SQL Engine:** Powered by DuckDB for lightning-fast SQL aggregations over CSV, Excel, and JSON files without database overhead.
 - **🎨 Glassmorphic Dark UI:** Beautiful browser-based dashboard with responsive charts, natural language chat studio, and report repository.
 

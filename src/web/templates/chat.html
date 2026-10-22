@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Chat — {{ metadata.file_name }} — DataMind AI{% endblock %}
+{% block title %}Chat — {{ metadata.file_name }} — DataWhale AI{% endblock %}
 {% block page_title %}
     <span class="page-title-with-badge">
         {{ metadata.file_name }}
@@ -51,7 +51,7 @@
                 </div>
                 <div class="message-content">
                     <div class="message-header">
-                        <span class="message-sender">DataMind AI</span>
+                        <span class="message-sender">DataWhale AI</span>
                     </div>
                     <div class="message-body">
                         <p>Hello! I've loaded <strong>{{ metadata.file_name }}</strong> with <strong>{{ '{:,}'.format(metadata.num_rows) }}</strong> rows and <strong>{{ metadata.num_columns }}</strong> columns.</p>
@@ -117,7 +117,7 @@
         div.className = `message message-${type}`;
 
         const avatarIcon = type === 'user' ? 'user' : 'brain-circuit';
-        const sender = type === 'user' ? 'You' : 'DataMind AI';
+        const sender = type === 'user' ? 'You' : 'DataWhale AI';
 
         div.innerHTML = `
             <div class="message-avatar">

@@ -67,7 +67,7 @@ def extract_report_context(report_id: str, html_text: str | None = None) -> dict
                 "best_model": "AutoML Ensemble",
                 "best_metric_label": "Score",
                 "best_metric_value": "0.92",
-                "narrative": "Executive analytics compiled by DataMind AI.",
+                "narrative": "Executive analytics compiled by DataWhale AI.",
                 "correlations": [],
             }
         with open(file_path, "r", encoding="utf-8") as f:
@@ -187,7 +187,7 @@ async def answer_report_question(
         llm = router.get_llm_for_agent("report_writer")
         corr_summary = ", ".join([f"{c['feature_1']} ↔ {c['feature_2']} (r={c['pearson_r']})" for c in corrs]) or "No strong correlations"
 
-        system_prompt = f"""You are DataMind AI's Executive Report Analyst & Copilot.
+        system_prompt = f"""You are DataWhale AI's Executive Report Analyst & Copilot.
 The user is viewing an individual, publication-ready analytics report for dataset: {dataset}.
 
 ## Live Report Context
@@ -300,7 +300,7 @@ def inject_report_copilot_widget(html_content: str, report_id: str) -> str:
 
     widget_code = f"""
     <!-- ═══════════════════════════════════════════════════════════
-         Report AI Copilot Corner Widget (Injected by DataMind AI)
+         Report AI Copilot Corner Widget (Injected by DataWhale AI)
          ═══════════════════════════════════════════════════════════ -->
     <style>
         .report-copilot-card {{
@@ -739,7 +739,7 @@ def inject_report_copilot_widget(html_content: str, report_id: str) -> str:
                     </div>
                     <div class="report-msg-content">
                         <div class="report-msg-header">
-                            <span class="report-msg-sender">DataMind Report Copilot</span>
+                            <span class="report-msg-sender">DataWhale Report Copilot</span>
                         </div>
                         <div class="report-msg-bubble">
                             <p>Hello! I'm your <strong>Report Copilot</strong> for this <strong>{dataset_name}</strong> report.</p>
@@ -858,7 +858,7 @@ def inject_report_copilot_widget(html_content: str, report_id: str) -> str:
                     </div>
                     <div class="report-msg-content">
                         <div class="report-msg-header">
-                            <span class="report-msg-sender">DataMind Report Copilot</span>
+                            <span class="report-msg-sender">DataWhale Report Copilot</span>
                         </div>
                         <div class="report-msg-bubble">
                             <p>Conversation reset. I'm ready for any questions regarding this executive report.</p>

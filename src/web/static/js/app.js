@@ -1,5 +1,5 @@
 /**
- * DataMind AI — Core JavaScript
+ * DataWhale AI — Core JavaScript
  * Handles sidebar toggle, toasts, and utility functions.
  */
 

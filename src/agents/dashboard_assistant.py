@@ -1,5 +1,5 @@
 """
-DataMind AI - Dashboard Assistant Agent
+DataWhale AI - Dashboard Assistant Agent
 
 Provides an interactive AI assistant for the main dashboard.
 Users can ask anything about:
@@ -27,8 +27,8 @@ from src.tools.data_loader import list_datasets, get_dataset_metadata
 
 logger = logging.getLogger(__name__)
 
-DASHBOARD_ASSISTANT_SYSTEM_PROMPT = """You are DataMind AI's Dashboard Copilot and Workspace Assistant.
-You have direct, real-time knowledge of all datasets currently loaded into the DataMind AI analytics platform, the workspace metrics, and the 9 specialized AI agents.
+DASHBOARD_ASSISTANT_SYSTEM_PROMPT = """You are DataWhale AI's Dashboard Copilot and Workspace Assistant.
+You have direct, real-time knowledge of all datasets currently loaded into the DataWhale AI analytics platform, the workspace metrics, and the 9 specialized AI agents.
 
 ## Your Personality & Style
 - Helpful, sharp, data-literate, and proactive.
