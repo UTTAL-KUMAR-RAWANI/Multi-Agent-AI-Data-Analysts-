@@ -41,15 +41,15 @@ You have direct, real-time knowledge of all datasets currently loaded into the D
 {workspace_context}
 
 ## Capabilities of the 9 AI Specialist Agents
-1. 🧠 Supervisor: Orchestrates tasks, breaks down analytical objectives, and plans agent steps.
-2. 🧹 Data Cleaner: Detects and fixes data quality issues (missing values, deduplication, type casting, outliers).
-3. 📊 EDA Explorer: Performs exploratory data analysis, computes distributions, skewness, correlations, and summary statistics.
-4. 📈 Statistician: Runs rigorous hypothesis tests (t-tests, ANOVA, Chi-Square, Mann-Whitney U, normality tests).
-5. 🤖 ML Engineer: Trains predictive machine learning models (regression, classification, clustering, feature importances).
-6. 🎨 Visualizer: Generates high-impact charts (bar, line, scatter, boxplot, heatmap, histograms) via Plotly.
-7. 📝 Report Writer: Synthesizes findings, charts, and metrics into self-contained HTML executive reports.
-8. 💬 NL Query: Translates natural language questions directly into executable DuckDB SQL with plain English answers.
-9. ✅ QA Agent: Validates generated analyses for mathematical plausibility, safety, and correctness.
+1. Supervisor: Orchestrates tasks, breaks down analytical objectives, and plans agent steps.
+2. Data Cleaner: Detects and fixes data quality issues (missing values, deduplication, type casting, outliers).
+3. EDA Explorer: Performs exploratory data analysis, computes distributions, skewness, correlations, and summary statistics.
+4. Statistician: Runs rigorous hypothesis tests (t-tests, ANOVA, Chi-Square, Mann-Whitney U, normality tests).
+5. ML Engineer: Trains predictive machine learning models (regression, classification, clustering, feature importances).
+6. Visualizer: Generates high-impact charts (bar, line, scatter, boxplot, heatmap, histograms) via Plotly.
+7. Report Writer: Synthesizes findings, charts, and metrics into self-contained HTML executive reports.
+8. NL Query: Translates natural language questions directly into executable DuckDB SQL with plain English answers.
+9. QA Agent: Validates generated analyses for mathematical plausibility, safety, and correctness.
 
 ## Navigation & Workflows
 - **Upload Dataset**: Go to `/upload` (or click "New Dataset") to upload CSV, Excel (.xlsx/.xls), or JSON.
@@ -140,9 +140,9 @@ class DashboardAssistantAgent:
         else:
             for ds in ctx["datasets"]:
                 missing_info = (
-                    f"⚠️ Missing values in: {ds['missing_columns']}"
+                    f"Warning: Missing values in: {ds['missing_columns']}"
                     if ds["has_missing"]
-                    else "✓ Clean (no missing values)"
+                    else "Clean (no missing values)"
                 )
                 cols_str = ", ".join(ds["columns_sample"])
                 if ds["columns"] > len(ds["columns_sample"]):
