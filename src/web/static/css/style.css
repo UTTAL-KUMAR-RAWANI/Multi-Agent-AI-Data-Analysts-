@@ -209,6 +209,89 @@ a:hover {
     color: var(--accent-hover); 
 }
 
+/* ═══════════════════════════════════════════════════════════
+   Unified Lucide Icon System
+   ═══════════════════════════════════════════════════════════ */
+svg.lucide,
+i[data-lucide] {
+    display: inline-block;
+    vertical-align: middle;
+    stroke-width: 1.85px;
+    stroke: currentColor;
+    fill: none;
+    flex-shrink: 0;
+    transition: color var(--transition-fast), transform var(--transition-fast), stroke-width var(--transition-fast);
+}
+
+/* Sizing Scale */
+.icon-xs { width: 13px !important; height: 13px !important; }
+.icon-sm { width: 16px !important; height: 16px !important; }
+.icon-md { width: 20px !important; height: 20px !important; }
+.icon-lg { width: 24px !important; height: 24px !important; }
+.icon-xl { width: 32px !important; height: 32px !important; }
+.icon-hero { width: 44px !important; height: 44px !important; }
+
+/* Inline Icon Utility with text */
+.icon-inline {
+    display: inline-flex;
+    align-items: center;
+    vertical-align: -0.15em;
+    width: 1.1em;
+    height: 1.1em;
+    stroke-width: 1.85px;
+}
+
+/* Icon Containers (.icon-box) */
+.icon-box {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-md);
+    flex-shrink: 0;
+    transition: all var(--transition-base);
+}
+
+.icon-box-primary {
+    background: var(--accent-subtle);
+    color: var(--accent);
+    border: 1px solid rgba(124, 92, 252, 0.2);
+}
+
+.icon-box-success {
+    background: var(--success-subtle);
+    color: var(--success);
+    border: 1px solid rgba(52, 211, 153, 0.2);
+}
+
+.icon-box-warning {
+    background: var(--warning-subtle);
+    color: var(--warning);
+    border: 1px solid rgba(251, 191, 36, 0.2);
+}
+
+.icon-box-danger {
+    background: var(--danger-subtle);
+    color: var(--danger);
+    border: 1px solid rgba(248, 113, 113, 0.2);
+}
+
+.icon-box-info {
+    background: var(--info-subtle);
+    color: var(--info);
+    border: 1px solid rgba(96, 165, 250, 0.2);
+}
+
+.icon-box-neutral {
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--text-secondary);
+    border: 1px solid var(--surface-glass-border);
+}
+
+.icon-box-neutral:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-primary);
+}
+
 /* ─── Ambient Background ───────────────────────────────── */
 .ambient-bg {
     position: fixed;
@@ -843,33 +926,119 @@ a:hover {
 /* ─── Agent Cards ──────────────────────────────────────── */
 .agents-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(145px, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+    gap: 14px;
 }
 
 .agent-card {
     background: var(--gradient-surface);
     border: 1px solid var(--surface-glass-border);
     border-radius: var(--radius-md);
-    padding: 16px;
+    padding: 18px 14px 16px;
     text-align: center;
     transition: all var(--transition-base);
     position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
 .agent-card:hover {
-    border-color: rgba(124, 92, 252, 0.2);
+    border-color: rgba(124, 92, 252, 0.35);
     transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35), 0 0 20px rgba(124, 92, 252, 0.12);
 }
 
 .agent-card.active {
-    border-color: var(--success);
-    box-shadow: 0 0 20px rgba(52, 211, 153, 0.1);
+    border-color: rgba(52, 211, 153, 0.4);
+    box-shadow: 0 0 24px rgba(52, 211, 153, 0.12);
+}
+
+/* Redesigned Agent Icon Container replacing emojis */
+.agent-icon-wrap {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    margin-bottom: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.035);
+    border: 1px solid var(--surface-glass-border);
+    color: var(--text-secondary);
+    transition: all var(--transition-base);
+}
+
+.agent-icon-wrap svg,
+.agent-icon-wrap i {
+    width: 22px;
+    height: 22px;
+    stroke-width: 1.85px;
+}
+
+/* Agent-specific semantic accent containers */
+.agent-card[data-agent="supervisor"] .agent-icon-wrap {
+    background: rgba(124, 92, 252, 0.12);
+    border-color: rgba(124, 92, 252, 0.28);
+    color: #a78bfa;
+}
+
+.agent-card[data-agent="cleaner"] .agent-icon-wrap {
+    background: rgba(45, 212, 191, 0.12);
+    border-color: rgba(45, 212, 191, 0.28);
+    color: #2dd4bf;
+}
+
+.agent-card[data-agent="eda"] .agent-icon-wrap {
+    background: rgba(96, 165, 250, 0.12);
+    border-color: rgba(96, 165, 250, 0.28);
+    color: #60a5fa;
+}
+
+.agent-card[data-agent="statistician"] .agent-icon-wrap {
+    background: rgba(129, 140, 248, 0.12);
+    border-color: rgba(129, 140, 248, 0.28);
+    color: #818cf8;
+}
+
+.agent-card[data-agent="ml"] .agent-icon-wrap {
+    background: rgba(251, 146, 60, 0.12);
+    border-color: rgba(251, 146, 60, 0.28);
+    color: #fb923c;
+}
+
+.agent-card[data-agent="visualizer"] .agent-icon-wrap {
+    background: rgba(244, 114, 182, 0.12);
+    border-color: rgba(244, 114, 182, 0.28);
+    color: #f472b6;
+}
+
+.agent-card[data-agent="report"] .agent-icon-wrap {
+    background: rgba(56, 189, 248, 0.12);
+    border-color: rgba(56, 189, 248, 0.28);
+    color: #38bdf8;
+}
+
+.agent-card[data-agent="nl_query"] .agent-icon-wrap,
+.agent-card.active .agent-icon-wrap {
+    background: rgba(52, 211, 153, 0.14);
+    border-color: rgba(52, 211, 153, 0.35);
+    color: #34d399;
+}
+
+.agent-card[data-agent="qa"] .agent-icon-wrap {
+    background: rgba(167, 139, 250, 0.12);
+    border-color: rgba(167, 139, 250, 0.28);
+    color: #a78bfa;
+}
+
+.agent-card:hover .agent-icon-wrap {
+    transform: scale(1.08);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
 }
 
 .agent-emoji {
-    font-size: 2rem;
-    margin-bottom: 8px;
+    display: none;
 }
 
 .agent-card h4 {
@@ -1732,13 +1901,32 @@ a:hover {
 .toast-success {
     background: var(--success-subtle);
     color: var(--success);
-    border: 1px solid rgba(52, 211, 153, 0.2);
+    border: 1px solid rgba(52, 211, 153, 0.25);
 }
 
 .toast-error {
     background: var(--danger-subtle);
     color: var(--danger);
-    border: 1px solid rgba(248, 113, 113, 0.2);
+    border: 1px solid rgba(248, 113, 113, 0.25);
+}
+
+.toast-info {
+    background: var(--info-subtle);
+    color: var(--info);
+    border: 1px solid rgba(96, 165, 250, 0.25);
+}
+
+.toast .toast-icon {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    stroke-width: 2px;
+}
+
+.toast .toast-message {
+    flex: 1;
+    font-size: 0.86rem;
+    line-height: 1.4;
 }
 
 @keyframes toastIn {
