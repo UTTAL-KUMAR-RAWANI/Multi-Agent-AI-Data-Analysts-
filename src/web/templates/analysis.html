@@ -379,28 +379,28 @@
         <!-- Pipeline Execution Flow Status (Sequential Chips) -->
         <div class="agent-pipeline-bar" id="pipeline-status-bar">
             <div class="agent-chip pending" id="chip-supervisor">
-                <i data-lucide="brain"></i>
+                <i data-lucide="network"></i>
                 <span>1. Supervisor</span>
                 <span class="chip-tag" id="tag-supervisor">Pending</span>
             </div>
             <div class="pipeline-connector"><i data-lucide="chevron-right"></i></div>
 
             <div class="agent-chip pending" id="chip-cleaner">
-                <i data-lucide="brush"></i>
+                <i data-lucide="sparkles"></i>
                 <span>2. Cleaner</span>
                 <span class="chip-tag" id="tag-cleaner">Pending</span>
             </div>
             <div class="pipeline-connector"><i data-lucide="chevron-right"></i></div>
 
             <div class="agent-chip pending" id="chip-eda">
-                <i data-lucide="bar-chart-2"></i>
+                <i data-lucide="scan-search"></i>
                 <span>3. EDA Explorer</span>
                 <span class="chip-tag" id="tag-eda">Pending</span>
             </div>
             <div class="pipeline-connector"><i data-lucide="chevron-right"></i></div>
 
             <div class="agent-chip pending" id="chip-stats">
-                <i data-lucide="activity"></i>
+                <i data-lucide="trending-up"></i>
                 <span>4. Statistician</span>
                 <span class="chip-tag" id="tag-stats">Pending</span>
             </div>
@@ -414,7 +414,7 @@
             <div class="pipeline-connector"><i data-lucide="chevron-right"></i></div>
 
             <div class="agent-chip pending" id="chip-viz">
-                <i data-lucide="palette"></i>
+                <i data-lucide="bar-chart-3"></i>
                 <span>6. Visualizer</span>
                 <span class="chip-tag" id="tag-viz">Pending</span>
             </div>
@@ -428,7 +428,7 @@
             <div class="pipeline-connector"><i data-lucide="chevron-right"></i></div>
 
             <div class="agent-chip pending" id="chip-report">
-                <i data-lucide="file-check"></i>
+                <i data-lucide="file-text"></i>
                 <span>8. Report</span>
                 <span class="chip-tag" id="tag-report">Pending</span>
             </div>
@@ -464,16 +464,16 @@
     <!-- Tabs Navigation -->
     <div class="studio-tabs">
         <button class="studio-tab-btn active" onclick="switchTab('tab-synthesis', this)">
-            <i data-lucide="layout"></i> Executive Briefing
+            <i data-lucide="file-text"></i> Executive Briefing
         </button>
         <button class="studio-tab-btn" onclick="switchTab('tab-visuals', this)">
-            <i data-lucide="line-chart"></i> Visual Analytics
+            <i data-lucide="bar-chart-3"></i> Visual Analytics
         </button>
         <button class="studio-tab-btn" onclick="switchTab('tab-ml', this)">
             <i data-lucide="cpu"></i> Machine Learning
         </button>
         <button class="studio-tab-btn" onclick="switchTab('tab-eda', this)">
-            <i data-lucide="search"></i> Exploratory Profiling
+            <i data-lucide="scan-search"></i> Exploratory Profiling
         </button>
         <button class="studio-tab-btn" onclick="switchTab('tab-clean', this)">
             <i data-lucide="sparkles"></i> Data Hygiene Audit
@@ -701,7 +701,7 @@
             }
         }
         else if (msg.event === 'step_done') {
-            setChipState(msg.step_id, 'completed', '✓ Done');
+            setChipState(msg.step_id, 'completed', 'Completed');
             if (liveStatusText) {
                 liveStatusText.innerText = msg.message;
             }
@@ -721,7 +721,7 @@
                 if (el && !el.classList.contains('error')) {
                     el.className = 'agent-chip completed';
                     const tag = el.querySelector('.chip-tag');
-                    if (tag) tag.innerText = '✓ Done';
+                    if (tag) tag.innerText = 'Completed';
                 }
             });
 
@@ -748,7 +748,7 @@
         }
 
         if (liveStepBadge) {
-            liveStepBadge.innerText = success ? '✓ Completed (Stopped)' : '⚠ Error';
+            liveStepBadge.innerText = success ? 'Completed' : 'Error';
             liveStepBadge.style.color = success ? 'var(--success)' : 'var(--danger)';
         }
 
@@ -823,7 +823,7 @@
 
                     wrapper.innerHTML = `
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.75rem; border-bottom: 1px solid var(--surface-glass-border); padding-bottom: 0.6rem;">
-                            <span style="font-size:0.85rem; font-weight:700; color:var(--text-primary); text-transform:uppercase; letter-spacing:0.04em;">📊 ${chartTitle}</span>
+                            <span style="font-size:0.85rem; font-weight:700; color:var(--text-primary); text-transform:uppercase; letter-spacing:0.04em; display:inline-flex; align-items:center; gap:6px;"><i data-lucide="bar-chart-3" style="width:16px; height:16px; color:var(--accent);"></i> ${chartTitle}</span>
                             <span class="badge badge-accent" style="font-size: 0.7rem;">Interactive BI Tile</span>
                         </div>
                         <div id="live-chart-${idx}" style="width: 100%; height: 380px;"></div>
@@ -893,7 +893,7 @@
                 const severity = qa.severity || 'info';
                 const issues = (qa.issues || []).join('; ');
                 const sugg = (qa.suggestions || []).join('; ') || 'All mathematical boundaries verified.';
-                html += `<tr><td><strong>${agent}</strong></td><td><span style="color:var(--success);">✓ Passed</span></td><td><span class="badge badge-info">${severity}</span></td><td>${issues ? issues + ' — ' : ''}${sugg}</td></tr>`;
+                html += `<tr><td><strong>${agent}</strong></td><td><span style="color:var(--success); font-weight:600; display:inline-flex; align-items:center; gap:4px;"><i data-lucide="check" style="width:14px; height:14px;"></i> Passed</span></td><td><span class="badge badge-info">${severity}</span></td><td>${issues ? issues + ' — ' : ''}${sugg}</td></tr>`;
             });
             html += `</tbody></table>`;
             const qaContent = document.getElementById('qa-content');
@@ -917,7 +917,7 @@
 
             if (res.success) {
                 allStepChips.forEach(step => {
-                    setChipState(step.id, 'completed', '✓ Done');
+                    setChipState(step.id, 'completed', 'Completed');
                 });
                 const progressBar = document.getElementById('pipeline-progress-bar');
                 if (progressBar) progressBar.style.width = '100%';
