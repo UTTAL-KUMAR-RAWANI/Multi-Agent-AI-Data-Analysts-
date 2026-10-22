@@ -1,0 +1,937 @@
+{% extends "base.html" %}
+
+{% block title %}Multi-Agent Analysis — {{ metadata.file_name }} — DataMind AI{% endblock %}
+{% block page_title %}
+    <span class="page-title-with-badge">
+        {{ metadata.file_name }} · Multi-Agent Studio
+        <span class="badge badge-info">{{ '{:,}'.format(metadata.num_rows) }} rows × {{ metadata.num_columns }} cols</span>
+    </span>
+{% endblock %}
+
+{% block top_actions %}
+<a href="/chat/{{ dataset_id }}" class="btn btn-secondary" id="btn-open-chat">
+    <i data-lucide="message-square"></i>
+    <span>NL Query Chat</span>
+</a>
+<a href="/" class="btn btn-ghost" id="btn-back">
+    <i data-lucide="arrow-left"></i>
+    <span>Dashboard</span>
+</a>
+{% endblock %}
+
+{% block head %}
+<!-- Plotly.js for charts (Local Offline) -->
+<script src="/static/js/plotly.min.js"></script>
+<style>
+    .studio-container {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.25rem 0.65rem;
+        border-radius: 999px;
+        font-family: var(--font-sans);
+        font-size: 0.72rem;
+        font-weight: 650;
+        letter-spacing: var(--tracking-wide);
+        font-variant-numeric: tabular-nums lining-nums;
+    }
+    .badge-accent {
+        background: var(--accent-subtle);
+        color: var(--accent);
+        border: 1px solid var(--accent-glow);
+    }
+    .badge-success {
+        background: var(--success-subtle);
+        color: var(--success);
+        border: 1px solid rgba(52, 211, 153, 0.3);
+    }
+    .badge-info {
+        background: var(--info-subtle);
+        color: var(--info);
+        border: 1px solid rgba(96, 165, 250, 0.3);
+    }
+
+    .studio-hero {
+        background: var(--gradient-card);
+        border: 1px solid var(--surface-glass-border);
+        border-radius: var(--radius-lg);
+        padding: 1.8rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    /* Live Progress Bar */
+    .pipeline-progress-track {
+        width: 100%;
+        height: 6px;
+        background: rgba(255, 255, 255, 0.06);
+        border-radius: 999px;
+        overflow: hidden;
+        margin-top: 1.25rem;
+        position: relative;
+    }
+
+    .pipeline-progress-fill {
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 50%, #10b981 100%);
+        border-radius: 999px;
+        transition: width 0.4s ease-out;
+        box-shadow: 0 0 10px rgba(59, 130, 246, 0.6);
+    }
+
+    /* Live Status Banner */
+    .pipeline-status-banner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        margin-top: 0.85rem;
+        padding: 0.65rem 1rem;
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid var(--surface-glass-border);
+        border-radius: var(--radius-md);
+        font-size: 0.88rem;
+    }
+
+    .status-banner-left {
+        display: flex;
+        align-items: center;
+        gap: 0.65rem;
+        color: var(--text-primary);
+    }
+
+    .status-pulse-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--text-muted);
+        transition: all 0.3s ease;
+    }
+
+    .status-pulse-dot.running {
+        background: var(--accent);
+        box-shadow: 0 0 10px var(--accent-glow);
+        animation: pulse-dot 1.2s infinite;
+    }
+
+    .status-pulse-dot.stopped {
+        background: var(--success);
+        box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+    }
+
+    .status-pulse-dot.error {
+        background: var(--danger);
+        box-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
+    }
+
+    @keyframes pulse-dot {
+        0% { transform: scale(0.9); opacity: 0.8; }
+        50% { transform: scale(1.3); opacity: 1; }
+        100% { transform: scale(0.9); opacity: 0.8; }
+    }
+
+    /* Sequential Pipeline Stepper */
+    .agent-pipeline-bar {
+        display: flex;
+        gap: 0.4rem;
+        align-items: center;
+        flex-wrap: wrap;
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--surface-glass-border);
+    }
+
+    .agent-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.45rem 0.8rem;
+        border-radius: 999px;
+        background: var(--bg-tertiary);
+        border: 1px solid var(--surface-glass-border);
+        font-family: var(--font-sans);
+        font-size: 0.82rem;
+        font-weight: 550;
+        letter-spacing: 0.005em;
+        color: var(--text-secondary);
+        transition: all 0.25s ease;
+        position: relative;
+    }
+
+    .agent-chip .chip-tag {
+        font-family: var(--font-mono);
+        font-size: 0.68rem;
+        padding: 0.15rem 0.45rem;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.06);
+        color: var(--text-muted);
+        font-weight: 600;
+        letter-spacing: 0.03em;
+    }
+
+    .agent-chip.pending {
+        opacity: 0.6;
+        border-color: rgba(255, 255, 255, 0.05);
+    }
+
+    .agent-chip.active {
+        opacity: 1;
+        background: rgba(59, 130, 246, 0.15);
+        border-color: var(--accent);
+        color: #ffffff;
+        box-shadow: 0 0 16px rgba(59, 130, 246, 0.45);
+        animation: chip-glow 1.5s infinite alternate;
+    }
+
+    .agent-chip.active .chip-tag {
+        background: var(--accent);
+        color: #ffffff;
+    }
+
+    .agent-chip.completed {
+        opacity: 1;
+        background: rgba(16, 185, 129, 0.15);
+        border-color: var(--success);
+        color: var(--success);
+    }
+
+    .agent-chip.completed .chip-tag {
+        background: var(--success);
+        color: #0b0c10;
+        font-weight: 700;
+    }
+
+    .agent-chip.error {
+        opacity: 1;
+        background: rgba(239, 68, 68, 0.15);
+        border-color: var(--danger);
+        color: var(--danger);
+    }
+
+    .pipeline-connector {
+        color: var(--text-muted);
+        opacity: 0.4;
+        display: flex;
+        align-items: center;
+    }
+
+    @keyframes chip-glow {
+        from { box-shadow: 0 0 6px rgba(59, 130, 246, 0.3); }
+        to { box-shadow: 0 0 18px rgba(59, 130, 246, 0.7); }
+    }
+
+    /* Report Completion Banner */
+    .report-completion-banner {
+        background: linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(59, 130, 246, 0.1) 100%);
+        border: 1px solid rgba(16, 185, 129, 0.35);
+        border-radius: var(--radius-lg);
+        padding: 1.25rem 1.6rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+        animation: slideDown 0.35s ease-out;
+    }
+
+    @keyframes slideDown {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .report-banner-left {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .report-badge-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 10px;
+        background: rgba(16, 185, 129, 0.2);
+        color: var(--success);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.4rem;
+        border: 1px solid rgba(16, 185, 129, 0.4);
+    }
+
+    /* Tabs */
+    .studio-tabs {
+        display: flex;
+        gap: 0.5rem;
+        border-bottom: 1px solid var(--surface-glass-border);
+        padding-bottom: 0.5rem;
+        overflow-x: auto;
+    }
+
+    .studio-tab-btn {
+        background: transparent;
+        border: none;
+        color: var(--text-secondary);
+        padding: 0.6rem 1.1rem;
+        border-radius: var(--radius-md);
+        font-family: var(--font-sans);
+        font-weight: 600;
+        font-size: 0.88rem;
+        letter-spacing: var(--tracking-wide);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.2s ease;
+    }
+
+    .studio-tab-btn:hover {
+        color: var(--text-primary);
+        background: var(--surface-glass-hover);
+    }
+
+    .studio-tab-btn.active {
+        color: #fff;
+        background: var(--accent);
+    }
+
+    .tab-content {
+        display: none;
+    }
+
+    .tab-content.active {
+        display: block;
+    }
+
+    .chart-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(480px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .loading-spinner {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border: 2px solid rgba(255,255,255,0.3);
+        border-radius: 50%;
+        border-top-color: #fff;
+        animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="studio-container">
+    <!-- Hero / Controls -->
+    <div class="studio-hero glass-card">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+            <div>
+                <span class="badge badge-accent" style="margin-bottom: 0.5rem; display: inline-block;">Autonomous Multi-Agent Pipeline</span>
+                <h2 style="font-size: 1.5rem; font-weight: 700;">Data Intelligence & Prediction Studio</h2>
+                <p style="color: var(--text-secondary); max-width: 650px; font-size: 0.95rem; margin-top: 0.35rem;">
+                    Deploy 8 specialized AI agents executed in sequence to clean, explore, test hypotheses, build machine learning models, and generate interactive visuals.
+                </p>
+            </div>
+            <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                <button class="btn btn-primary" id="btn-run-full" onclick="runPipeline('full')">
+                    <i data-lucide="zap"></i>
+                    <span>Run Full Multi-Agent Pipeline</span>
+                </button>
+                <button class="btn btn-secondary" id="btn-run-clean" onclick="runPipeline('clean')">
+                    <i data-lucide="sparkles"></i>
+                    <span>Clean Data</span>
+                </button>
+                <button class="btn btn-secondary" id="btn-run-eda" onclick="runPipeline('eda')">
+                    <i data-lucide="pie-chart"></i>
+                    <span>Run EDA</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Live Progress Track -->
+        <div class="pipeline-progress-track">
+            <div class="pipeline-progress-fill" id="pipeline-progress-bar"></div>
+        </div>
+
+        <!-- Live Sequence Status Line -->
+        <div class="pipeline-status-banner" id="pipeline-status-banner">
+            <div class="status-banner-left">
+                <div class="status-pulse-dot" id="status-pulse-dot"></div>
+                <strong id="live-step-badge" style="font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary);">Ready</strong>
+                <span id="live-status-text" style="color: var(--text-secondary);">Click "Run Full Multi-Agent Pipeline" to begin autonomous execution across all specialist agents.</span>
+            </div>
+            <div id="live-time-status" style="font-size: 0.82rem; color: var(--text-muted); font-family: var(--font-mono, monospace);">0/8 Steps</div>
+        </div>
+
+        <!-- Pipeline Execution Flow Status (Sequential Chips) -->
+        <div class="agent-pipeline-bar" id="pipeline-status-bar">
+            <div class="agent-chip pending" id="chip-supervisor">
+                <i data-lucide="brain"></i>
+                <span>1. Supervisor</span>
+                <span class="chip-tag" id="tag-supervisor">Pending</span>
+            </div>
+            <div class="pipeline-connector"><i data-lucide="chevron-right"></i></div>
+
+            <div class="agent-chip pending" id="chip-cleaner">
+                <i data-lucide="brush"></i>
+                <span>2. Cleaner</span>
+                <span class="chip-tag" id="tag-cleaner">Pending</span>
+            </div>
+            <div class="pipeline-connector"><i data-lucide="chevron-right"></i></div>
+
+            <div class="agent-chip pending" id="chip-eda">
+                <i data-lucide="bar-chart-2"></i>
+                <span>3. EDA Explorer</span>
+                <span class="chip-tag" id="tag-eda">Pending</span>
+            </div>
+            <div class="pipeline-connector"><i data-lucide="chevron-right"></i></div>
+
+            <div class="agent-chip pending" id="chip-stats">
+                <i data-lucide="activity"></i>
+                <span>4. Statistician</span>
+                <span class="chip-tag" id="tag-stats">Pending</span>
+            </div>
+            <div class="pipeline-connector"><i data-lucide="chevron-right"></i></div>
+
+            <div class="agent-chip pending" id="chip-ml">
+                <i data-lucide="cpu"></i>
+                <span>5. ML Engineer</span>
+                <span class="chip-tag" id="tag-ml">Pending</span>
+            </div>
+            <div class="pipeline-connector"><i data-lucide="chevron-right"></i></div>
+
+            <div class="agent-chip pending" id="chip-viz">
+                <i data-lucide="palette"></i>
+                <span>6. Visualizer</span>
+                <span class="chip-tag" id="tag-viz">Pending</span>
+            </div>
+            <div class="pipeline-connector"><i data-lucide="chevron-right"></i></div>
+
+            <div class="agent-chip pending" id="chip-qa">
+                <i data-lucide="shield-check"></i>
+                <span>7. QA Agent</span>
+                <span class="chip-tag" id="tag-qa">Pending</span>
+            </div>
+            <div class="pipeline-connector"><i data-lucide="chevron-right"></i></div>
+
+            <div class="agent-chip pending" id="chip-report">
+                <i data-lucide="file-check"></i>
+                <span>8. Report</span>
+                <span class="chip-tag" id="tag-report">Pending</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- REPORT READY COMPLETION BANNER (Appears immediately when report is created & process stops) -->
+    <div id="report-ready-banner" class="report-completion-banner" style="display: none;">
+        <div class="report-banner-left">
+            <div class="report-badge-icon"><i data-lucide="check-circle-2"></i></div>
+            <div>
+                <div style="display: flex; align-items: center; gap: 0.6rem;">
+                    <h4 style="font-size: 1.15rem; font-weight: 700; color: #fff;">Executive Report Created Successfully</h4>
+                    <span class="badge badge-success"><i data-lucide="check"></i> Process Stopped</span>
+                </div>
+                <p style="font-size: 0.88rem; color: var(--text-secondary); margin-top: 0.25rem;" id="report-banner-meta">
+                    All specialist agent workflows have completed and stopped. Full intelligence dossier published.
+                </p>
+            </div>
+        </div>
+        <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+            <a id="btn-banner-view-report" href="#" target="_blank" class="btn btn-primary">
+                <i data-lucide="external-link"></i>
+                <span>Open Full Executive Report</span>
+            </a>
+            <a id="btn-banner-download-report" href="#" class="btn btn-secondary">
+                <i data-lucide="download"></i>
+                <span>Download Report</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Tabs Navigation -->
+    <div class="studio-tabs">
+        <button class="studio-tab-btn active" onclick="switchTab('tab-synthesis', this)">
+            <i data-lucide="layout"></i> Executive Briefing
+        </button>
+        <button class="studio-tab-btn" onclick="switchTab('tab-visuals', this)">
+            <i data-lucide="line-chart"></i> Visual Analytics
+        </button>
+        <button class="studio-tab-btn" onclick="switchTab('tab-ml', this)">
+            <i data-lucide="cpu"></i> Machine Learning
+        </button>
+        <button class="studio-tab-btn" onclick="switchTab('tab-eda', this)">
+            <i data-lucide="search"></i> Exploratory Profiling
+        </button>
+        <button class="studio-tab-btn" onclick="switchTab('tab-clean', this)">
+            <i data-lucide="sparkles"></i> Data Hygiene Audit
+        </button>
+        <button class="studio-tab-btn" onclick="switchTab('tab-qa', this)">
+            <i data-lucide="shield-check"></i> QA Verification
+        </button>
+    </div>
+
+    <!-- TAB 1: Executive Briefing -->
+    <div id="tab-synthesis" class="tab-content active">
+        <div class="glass-card" style="padding: 1.8rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+                <h3 style="font-size: 1.25rem; font-weight: 700;">Executive Synthesis & Actionable Takeaways</h3>
+                <a id="btn-view-report-link" href="#" target="_blank" class="btn btn-secondary btn-sm" style="display: none;">
+                    <i data-lucide="external-link"></i> Open Full Report
+                </a>
+            </div>
+            <div id="synthesis-text" style="color: var(--text-primary); font-size: 1rem; line-height: 1.7; white-space: pre-wrap;">
+                Click "Run Full Multi-Agent Pipeline" above to autonomously analyze this dataset across all agents in sequence.
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 2: Visual Analytics -->
+    <div id="tab-visuals" class="tab-content">
+        <div class="chart-grid" id="charts-container">
+            <div class="empty-state glass-card" style="grid-column: 1 / -1; padding: 3rem;">
+                <div class="empty-icon"><i data-lucide="bar-chart-3"></i></div>
+                <h3>No charts generated yet</h3>
+                <p>Run the pipeline or Visualizer agent to automatically generate interactive Plotly charts.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 3: Machine Learning -->
+    <div id="tab-ml" class="tab-content">
+        <div class="glass-card" style="padding: 1.8rem;" id="ml-container">
+            <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 1rem;">AutoML Model Benchmarking</h3>
+            <div id="ml-content" style="color: var(--text-secondary);">
+                AutoML will evaluate multiple classification and regression algorithms, determine the champion model, and score feature importance.
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 4: EDA -->
+    <div id="tab-eda" class="tab-content">
+        <div class="glass-card" style="padding: 1.8rem;" id="eda-container">
+            <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 1rem;">Exploratory Data Analysis</h3>
+            <div id="eda-content" style="color: var(--text-secondary);">
+                Summary distributions, correlation matrix, and data anomalies will appear here.
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 5: Data Hygiene -->
+    <div id="tab-clean" class="tab-content">
+        <div class="glass-card" style="padding: 1.8rem;" id="clean-container">
+            <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 1rem;">Data Cleaning & Quality Audit</h3>
+            <div id="clean-content" style="color: var(--text-secondary);">
+                Audit log of missing value imputations, duplicate removals, and outlier clipping will be recorded here.
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 6: QA Verification -->
+    <div id="tab-qa" class="tab-content">
+        <div class="glass-card" style="padding: 1.8rem;" id="qa-container">
+            <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 1rem;">Quality Assurance Review Log</h3>
+            <div id="qa-content" style="color: var(--text-secondary);">
+                Audits performed by the QA Agent checking statistical validity and potential data leaks.
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const datasetId = "{{ dataset_id }}";
+    let activeEventSource = null;
+    let cachedVisualizations = [];
+
+    function switchTab(tabId, btnEl) {
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.studio-tab-btn').forEach(el => el.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active');
+        if (btnEl) {
+            btnEl.classList.add('active');
+        }
+
+        // Trigger Plotly chart resizing when visual analytics tab becomes visible
+        if (tabId === 'tab-visuals') {
+            setTimeout(() => {
+                document.querySelectorAll('div[id^="live-chart-"]').forEach(chartDiv => {
+                    if (window.Plotly && chartDiv) {
+                        try {
+                            Plotly.Plots.resize(chartDiv);
+                        } catch(e) {}
+                    }
+                });
+            }, 60);
+        }
+    }
+
+    const allStepChips = [
+        { id: 'chip-supervisor', tagId: 'tag-supervisor', num: 1, name: 'Supervisor' },
+        { id: 'chip-cleaner', tagId: 'tag-cleaner', num: 2, name: 'Cleaner' },
+        { id: 'chip-eda', tagId: 'tag-eda', num: 3, name: 'EDA Explorer' },
+        { id: 'chip-stats', tagId: 'tag-stats', num: 4, name: 'Statistician' },
+        { id: 'chip-ml', tagId: 'tag-ml', num: 5, name: 'ML Engineer' },
+        { id: 'chip-viz', tagId: 'tag-viz', num: 6, name: 'Visualizer' },
+        { id: 'chip-qa', tagId: 'tag-qa', num: 7, name: 'QA Agent' },
+        { id: 'chip-report', tagId: 'tag-report', num: 8, name: 'Report' }
+    ];
+
+    function resetPipelineChips() {
+        allStepChips.forEach(step => {
+            const el = document.getElementById(step.id);
+            const tag = document.getElementById(step.tagId);
+            if (el) el.className = 'agent-chip pending';
+            if (tag) tag.innerText = 'Pending';
+        });
+        const pBar = document.getElementById('pipeline-progress-bar');
+        if (pBar) pBar.style.width = '0%';
+    }
+
+    function setChipState(chipId, state, label) {
+        const el = document.getElementById(chipId);
+        if (!el) return;
+        el.className = `agent-chip ${state}`;
+        const tag = el.querySelector('.chip-tag');
+        if (tag && label) {
+            tag.innerText = label;
+        }
+    }
+
+    async function runPipeline(mode = 'full') {
+        // If an existing stream is open, stop it
+        if (activeEventSource) {
+            activeEventSource.close();
+            activeEventSource = null;
+        }
+
+        const runFullBtn = document.getElementById('btn-run-full');
+        const cleanBtn = document.getElementById('btn-run-clean');
+        const edaBtn = document.getElementById('btn-run-eda');
+
+        [runFullBtn, cleanBtn, edaBtn].forEach(b => { if (b) b.disabled = true; });
+        runFullBtn.innerHTML = `<span class="loading-spinner"></span> <span>Running Sequence...</span>`;
+
+        resetPipelineChips();
+
+        const pulseDot = document.getElementById('status-pulse-dot');
+        const liveStepBadge = document.getElementById('live-step-badge');
+        const liveStatusText = document.getElementById('live-status-text');
+        const liveTimeStatus = document.getElementById('live-time-status');
+        const progressBar = document.getElementById('pipeline-progress-bar');
+        const reportBanner = document.getElementById('report-ready-banner');
+        if (reportBanner) reportBanner.style.display = 'none';
+
+        if (pulseDot) pulseDot.className = 'status-pulse-dot running';
+        if (liveStepBadge) {
+            liveStepBadge.innerText = 'Initializing';
+            liveStepBadge.style.color = 'var(--accent)';
+        }
+        if (liveStatusText) liveStatusText.innerText = 'Starting multi-agent sequence...';
+
+        showToast('Multi-Agent sequence initiated...', 'info');
+
+        const streamUrl = `/api/analysis/stream/${encodeURIComponent(datasetId)}?mode=${encodeURIComponent(mode)}`;
+
+        // Use EventSource for real-time sequential progress tracking
+        try {
+            const es = new EventSource(streamUrl);
+            activeEventSource = es;
+
+            es.onmessage = (event) => {
+                try {
+                    const msg = JSON.parse(event.data);
+                    handlePipelineEvent(msg, es, runFullBtn, cleanBtn, edaBtn);
+                } catch (parseErr) {
+                    console.error("SSE parse error:", parseErr);
+                }
+            };
+
+            es.onerror = (err) => {
+                console.warn("SSE connection ended or interrupted:", err);
+                // Clean up and stop
+                if (activeEventSource) {
+                    activeEventSource.close();
+                    activeEventSource = null;
+                }
+                finalizeProcessStop(runFullBtn, cleanBtn, edaBtn, false, 'Connection closed.');
+            };
+
+        } catch (streamErr) {
+            console.warn("EventSource unavailable, falling back to standard execution:", streamErr);
+            fallbackRunPipeline(mode, runFullBtn, cleanBtn, edaBtn);
+        }
+    }
+
+    function handlePipelineEvent(msg, es, runFullBtn, cleanBtn, edaBtn) {
+        const pulseDot = document.getElementById('status-pulse-dot');
+        const liveStepBadge = document.getElementById('live-step-badge');
+        const liveStatusText = document.getElementById('live-status-text');
+        const liveTimeStatus = document.getElementById('live-time-status');
+        const progressBar = document.getElementById('pipeline-progress-bar');
+
+        if (msg.event === 'step_start') {
+            setChipState(msg.step_id, 'active', 'Running...');
+            if (liveStepBadge) {
+                liveStepBadge.innerText = `Step ${msg.step_index}/8`;
+                liveStepBadge.style.color = 'var(--accent)';
+            }
+            if (liveStatusText) {
+                liveStatusText.innerText = `${msg.agent}: ${msg.message}`;
+            }
+            if (liveTimeStatus) {
+                liveTimeStatus.innerText = `Executing ${msg.step_index} of 8`;
+            }
+            if (progressBar) {
+                const pct = Math.max(10, Math.round(((msg.step_index - 0.4) / 8) * 100));
+                progressBar.style.width = `${pct}%`;
+            }
+        }
+        else if (msg.event === 'step_done') {
+            setChipState(msg.step_id, 'completed', '✓ Done');
+            if (liveStatusText) {
+                liveStatusText.innerText = msg.message;
+            }
+            if (progressBar) {
+                const pct = Math.round((msg.step_index / 8) * 100);
+                progressBar.style.width = `${pct}%`;
+            }
+        }
+        else if (msg.event === 'pipeline_complete') {
+            // STOP THE PROCESS EXPLICITLY
+            if (es) es.close();
+            activeEventSource = null;
+
+            // Mark all active chips completed
+            allStepChips.forEach(step => {
+                const el = document.getElementById(step.id);
+                if (el && !el.classList.contains('error')) {
+                    el.className = 'agent-chip completed';
+                    const tag = el.querySelector('.chip-tag');
+                    if (tag) tag.innerText = '✓ Done';
+                }
+            });
+
+            if (progressBar) progressBar.style.width = '100%';
+
+            finalizeProcessStop(runFullBtn, cleanBtn, edaBtn, true, msg.message);
+            renderAnalysisResults(msg);
+        }
+        else if (msg.event === 'pipeline_error') {
+            if (es) es.close();
+            activeEventSource = null;
+            finalizeProcessStop(runFullBtn, cleanBtn, edaBtn, false, msg.message || msg.error);
+        }
+    }
+
+    function finalizeProcessStop(runFullBtn, cleanBtn, edaBtn, success = true, message = '') {
+        const pulseDot = document.getElementById('status-pulse-dot');
+        const liveStepBadge = document.getElementById('live-step-badge');
+        const liveStatusText = document.getElementById('live-status-text');
+        const liveTimeStatus = document.getElementById('live-time-status');
+
+        if (pulseDot) {
+            pulseDot.className = success ? 'status-pulse-dot stopped' : 'status-pulse-dot error';
+        }
+
+        if (liveStepBadge) {
+            liveStepBadge.innerText = success ? '✓ Completed (Stopped)' : '⚠ Error';
+            liveStepBadge.style.color = success ? 'var(--success)' : 'var(--danger)';
+        }
+
+        if (liveStatusText) {
+            liveStatusText.innerText = message || (success ? 'Multi-agent analysis process stopped successfully.' : 'Process stopped due to an error.');
+        }
+
+        if (liveTimeStatus) {
+            liveTimeStatus.innerText = success ? '8/8 Finished' : 'Terminated';
+        }
+
+        // Re-enable all action buttons
+        [runFullBtn, cleanBtn, edaBtn].forEach(b => { if (b) b.disabled = false; });
+
+        if (runFullBtn) {
+            runFullBtn.innerHTML = `<i data-lucide="check-circle-2"></i> <span>Re-run Analysis</span>`;
+        }
+
+        lucide.createIcons();
+    }
+
+    function renderAnalysisResults(res) {
+        showToast('Report created & analysis process stopped successfully!', 'success');
+
+        // Show Report Completion Banner
+        const reportBanner = document.getElementById('report-ready-banner');
+        if (reportBanner && res.report_url) {
+            reportBanner.style.display = 'flex';
+            const vLink = document.getElementById('btn-banner-view-report');
+            if (vLink) vLink.href = res.report_url;
+            const dLink = document.getElementById('btn-banner-download-report');
+            if (dLink && res.report_id) {
+                dLink.href = `/reports/download/${res.report_id}`;
+            }
+            const bannerMeta = document.getElementById('report-banner-meta');
+            if (bannerMeta) {
+                bannerMeta.innerText = `Full executive report ready at: ${res.report_url}. Analysis process finalized and stopped.`;
+            }
+        }
+
+        // 1. Executive Summary
+        const synthText = document.getElementById('synthesis-text');
+        if (synthText) {
+            synthText.innerText = res.executive_summary || "Analysis completed.";
+        }
+        if (res.report_url) {
+            const rLink = document.getElementById('btn-view-report-link');
+            if (rLink) {
+                rLink.href = res.report_url;
+                rLink.style.display = 'inline-flex';
+            }
+        }
+
+        // 2. Visualizations
+        if (res.visualizations && res.visualizations.length > 0) {
+            cachedVisualizations = res.visualizations;
+            const cContainer = document.getElementById('charts-container');
+            if (cContainer) {
+                cContainer.innerHTML = '';
+                res.visualizations.forEach((spec, idx) => {
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'glass-card';
+                    wrapper.style.padding = '1.25rem';
+                    wrapper.style.borderRadius = '12px';
+                    wrapper.style.border = '1px solid var(--surface-glass-border)';
+                    wrapper.style.boxShadow = '0 4px 18px rgba(0,0,0,0.35)';
+
+                    let chartTitle = `Visual Tile #${idx + 1}`;
+                    if (spec.layout && spec.layout.title) {
+                        chartTitle = typeof spec.layout.title === 'string' ? spec.layout.title : (spec.layout.title.text || chartTitle);
+                    }
+
+                    wrapper.innerHTML = `
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.75rem; border-bottom: 1px solid var(--surface-glass-border); padding-bottom: 0.6rem;">
+                            <span style="font-size:0.85rem; font-weight:700; color:var(--text-primary); text-transform:uppercase; letter-spacing:0.04em;">📊 ${chartTitle}</span>
+                            <span class="badge badge-accent" style="font-size: 0.7rem;">Interactive BI Tile</span>
+                        </div>
+                        <div id="live-chart-${idx}" style="width: 100%; height: 380px;"></div>
+                    `;
+                    cContainer.appendChild(wrapper);
+
+                    setTimeout(() => {
+                        const layout = spec.layout || {};
+                        layout.autosize = true;
+                        if (window.Plotly) {
+                            try {
+                                Plotly.newPlot(`live-chart-${idx}`, spec.data || [], layout, { responsive: true });
+                            } catch(plotErr) {
+                                console.warn(`Chart ${idx} plot error:`, plotErr);
+                            }
+                        }
+                    }, 50);
+                });
+            }
+        }
+
+        // 3. Machine Learning
+        if (res.ml_results && res.ml_results.ml_results) {
+            const ml = res.ml_results.ml_results;
+            let html = `<p style="margin-bottom: 1rem;"><strong>Champion Model:</strong> <span class="badge badge-accent">${ml.best_model || 'Evaluated'}</span> · <strong>Task:</strong> ${ml.task_type || 'Prediction'}</p>`;
+            if (ml.model_benchmarks && Array.isArray(ml.model_benchmarks)) {
+                html += `<table class="result-table" style="width:100%; margin-bottom: 1.5rem;"><thead><tr><th>Model</th><th>Score</th></tr></thead><tbody>`;
+                ml.model_benchmarks.forEach(m => {
+                    const score = m.r2_score ?? m.accuracy ?? m.f1_score ?? 'N/A';
+                    html += `<tr><td>${m.model}</td><td><strong>${score}</strong></td></tr>`;
+                });
+                html += `</tbody></table>`;
+            }
+            if (res.ml_results.narrative) {
+                html += `<div style="background: rgba(255,255,255,0.02); padding: 1.2rem; border-radius: 8px; white-space: pre-wrap; line-height: 1.6;">${res.ml_results.narrative}</div>`;
+            }
+            const mlContent = document.getElementById('ml-content');
+            if (mlContent) mlContent.innerHTML = html;
+        }
+
+        // 4. EDA
+        if (res.eda_results) {
+            let html = '';
+            if (res.eda_results.insights) {
+                html += `<div style="background: rgba(255,255,255,0.02); padding: 1.2rem; border-radius: 8px; white-space: pre-wrap; line-height: 1.6; margin-bottom: 1rem;">${res.eda_results.insights}</div>`;
+            }
+            const edaContent = document.getElementById('eda-content');
+            if (edaContent) edaContent.innerHTML = html || 'Exploratory data profiling completed.';
+        }
+
+        // 5. Cleaning Audit
+        if (res.cleaning_report && res.cleaning_report.audit_report) {
+            const audit = res.cleaning_report.audit_report;
+            let html = `<p style="margin-bottom: 1rem;"><strong>Audit Summary:</strong> Cleaned rows: <strong>${audit.final_rows ?? 'N/A'}</strong> (from ${audit.initial_rows ?? 'N/A'}). Missing cells treated: <strong>${audit.initial_missing_cells ?? 0}</strong>.</p>`;
+            if (res.cleaning_report.narrative) {
+                html += `<div style="margin-top: 1rem; background: rgba(255,255,255,0.02); padding: 1.2rem; border-radius: 8px; white-space: pre-wrap; line-height: 1.6;">${res.cleaning_report.narrative}</div>`;
+            }
+            const cleanContent = document.getElementById('clean-content');
+            if (cleanContent) cleanContent.innerHTML = html;
+        }
+
+        // 6. QA
+        if (res.qa_feedback && Array.isArray(res.qa_feedback) && res.qa_feedback.length > 0) {
+            let html = `<table class="result-table" style="width: 100%;"><thead><tr><th>Specialist Agent</th><th>Audit Status</th><th>Severity</th><th>Findings & Safeguards</th></tr></thead><tbody>`;
+            res.qa_feedback.forEach(qa => {
+                const agent = qa.agent || 'Agent';
+                const severity = qa.severity || 'info';
+                const issues = (qa.issues || []).join('; ');
+                const sugg = (qa.suggestions || []).join('; ') || 'All mathematical boundaries verified.';
+                html += `<tr><td><strong>${agent}</strong></td><td><span style="color:var(--success);">✓ Passed</span></td><td><span class="badge badge-info">${severity}</span></td><td>${issues ? issues + ' — ' : ''}${sugg}</td></tr>`;
+            });
+            html += `</tbody></table>`;
+            const qaContent = document.getElementById('qa-content');
+            if (qaContent) qaContent.innerHTML = html;
+        }
+
+        lucide.createIcons();
+    }
+
+    async function fallbackRunPipeline(mode, runFullBtn, cleanBtn, edaBtn) {
+        try {
+            const res = await apiFetch('/api/analysis/run', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    dataset_id: datasetId,
+                    mode: mode,
+                    objective: "Perform comprehensive end-to-end data analysis, clean issues, detect patterns, train models, and generate publication-quality visual insights."
+                })
+            });
+
+            if (res.success) {
+                allStepChips.forEach(step => {
+                    setChipState(step.id, 'completed', '✓ Done');
+                });
+                const progressBar = document.getElementById('pipeline-progress-bar');
+                if (progressBar) progressBar.style.width = '100%';
+
+                finalizeProcessStop(runFullBtn, cleanBtn, edaBtn, true, 'Analysis completed.');
+                renderAnalysisResults(res);
+            } else {
+                finalizeProcessStop(runFullBtn, cleanBtn, edaBtn, false, res.error || 'Failed');
+                showToast(res.error || 'Pipeline execution failed', 'error');
+            }
+        } catch(err) {
+            finalizeProcessStop(runFullBtn, cleanBtn, edaBtn, false, err.message);
+            showToast('Error: ' + err.message, 'error');
+        }
+    }
+</script>
+{% endblock %}

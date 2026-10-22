@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}DataMind AI{% endblock %}</title>
+    <meta name="description" content="Multi-Agent AI Data Analysis Platform — Ask questions about your data in plain English.">
+
+    <!-- Google Fonts: Display (Outfit), Interface (Plus Jakarta Sans), Data/Code (JetBrains Mono) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,500&display=swap" rel="stylesheet">
+
+    <!-- Lucide Icons (Local Offline) -->
+    <script src="/static/js/lucide.min.js"></script>
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="/static/css/style.css?v=2.2">
+
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <!-- Ambient Background -->
+    <div class="ambient-bg">
+        <div class="ambient-orb ambient-orb-1"></div>
+        <div class="ambient-orb ambient-orb-2"></div>
+        <div class="ambient-orb ambient-orb-3"></div>
+    </div>
+
+    <!-- Sidebar Navigation -->
+    <nav class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <div class="logo-icon">
+                    <i data-lucide="brain-circuit"></i>
+                </div>
+                <div class="logo-text">
+                    <span class="logo-title">DataMind</span>
+                    <span class="logo-subtitle">AI Analytics</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="sidebar-nav">
+            <a href="/" class="nav-item {% if active_page == 'dashboard' %}active{% endif %}" id="nav-dashboard">
+                <i data-lucide="layout-dashboard"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="/upload" class="nav-item {% if active_page == 'upload' %}active{% endif %}" id="nav-upload">
+                <i data-lucide="upload-cloud"></i>
+                <span>Upload Data</span>
+            </a>
+            <a href="/reports" class="nav-item {% if active_page == 'reports' %}active{% endif %}" id="nav-reports">
+                <i data-lucide="file-text"></i>
+                <span>Reports</span>
+            </a>
+
+            <div class="nav-section-label">Datasets</div>
+            <div id="dataset-nav-list">
+                <!-- Populated by JS or server -->
+            </div>
+        </div>
+
+        <div class="sidebar-footer">
+            <div class="provider-badge" id="provider-badge">
+                <div class="provider-dot"></div>
+                <span>Loading...</span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <header class="top-bar">
+            <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+                <i data-lucide="panel-left"></i>
+            </button>
+            <div class="top-bar-title">
+                <h1>{% block page_title %}Dashboard{% endblock %}</h1>
+            </div>
+            <div class="top-bar-actions">
+                {% block top_actions %}{% endblock %}
+            </div>
+        </header>
+
+        <div class="content-area">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <script src="/static/js/app.js"></script>
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

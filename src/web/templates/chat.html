@@ -1,0 +1,259 @@
+{% extends "base.html" %}
+
+{% block title %}Chat — {{ metadata.file_name }} — DataMind AI{% endblock %}
+{% block page_title %}
+    <span class="page-title-with-badge">
+        {{ metadata.file_name }}
+        <span class="badge badge-info">{{ '{:,}'.format(metadata.num_rows) }} rows × {{ metadata.num_columns }} cols</span>
+    </span>
+{% endblock %}
+
+{% block top_actions %}
+<a href="/" class="btn btn-ghost" id="btn-back-dashboard">
+    <i data-lucide="arrow-left"></i>
+    <span>Back</span>
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="chat-page">
+    <!-- Dataset Info Sidebar (collapsible) -->
+    <div class="chat-sidebar glass-card" id="chat-sidebar">
+        <div class="chat-sidebar-header">
+            <h3>Dataset Schema</h3>
+            <button class="btn-icon" onclick="toggleChatSidebar()" id="btn-toggle-schema" aria-label="Toggle schema panel">
+                <i data-lucide="panel-right-close"></i>
+            </button>
+        </div>
+        <div class="schema-list">
+            {% for col in metadata.columns %}
+            <div class="schema-item">
+                <span class="schema-col-name">{{ col.name }}</span>
+                <span class="schema-col-type">{{ col.dtype }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% if metadata.has_missing %}
+        <div class="schema-warning">
+            <i data-lucide="alert-triangle"></i>
+            <span>{{ metadata.missing_summary | length }} columns have missing values</span>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Chat Area -->
+    <div class="chat-main">
+        <div class="chat-messages" id="chat-messages">
+            <!-- Welcome Message -->
+            <div class="message message-system">
+                <div class="message-avatar">
+                    <i data-lucide="brain-circuit"></i>
+                </div>
+                <div class="message-content">
+                    <div class="message-header">
+                        <span class="message-sender">DataMind AI</span>
+                    </div>
+                    <div class="message-body">
+                        <p>Hello! I've loaded <strong>{{ metadata.file_name }}</strong> with <strong>{{ '{:,}'.format(metadata.num_rows) }}</strong> rows and <strong>{{ metadata.num_columns }}</strong> columns.</p>
+                        <p>Ask me anything about your data in plain English! For example:</p>
+                        <div class="suggestion-chips">
+                            <button class="chip" onclick="askQuestion(this.textContent)" id="chip-1">What are the top 10 values?</button>
+                            <button class="chip" onclick="askQuestion(this.textContent)" id="chip-2">Show summary statistics</button>
+                            <button class="chip" onclick="askQuestion(this.textContent)" id="chip-3">Are there any missing values?</button>
+                            <button class="chip" onclick="askQuestion(this.textContent)" id="chip-4">What is the distribution?</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Input Area -->
+        <div class="chat-input-area">
+            <div class="chat-input-container glass-card">
+                <textarea
+                    id="chat-input"
+                    placeholder="Ask a question about your data..."
+                    rows="1"
+                    autofocus
+                ></textarea>
+                <button class="btn btn-primary btn-send" id="btn-send" onclick="sendMessage()">
+                    <i data-lucide="send-horizontal"></i>
+                </button>
+            </div>
+            <p class="chat-hint">Press Enter to send • Shift+Enter for new line</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const datasetId = "{{ dataset_id }}";
+    const chatMessages = document.getElementById('chat-messages');
+    const chatInput = document.getElementById('chat-input');
+    let isProcessing = false;
+
+    // Auto-resize textarea
+    chatInput.addEventListener('input', () => {
+        chatInput.style.height = 'auto';
+        chatInput.style.height = Math.min(chatInput.scrollHeight, 150) + 'px';
+    });
+
+    // Enter to send
+    chatInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
+
+    function askQuestion(question) {
+        chatInput.value = question;
+        sendMessage();
+    }
+
+    function addMessage(type, content) {
+        const div = document.createElement('div');
+        div.className = `message message-${type}`;
+
+        const avatarIcon = type === 'user' ? 'user' : 'brain-circuit';
+        const sender = type === 'user' ? 'You' : 'DataMind AI';
+
+        div.innerHTML = `
+            <div class="message-avatar">
+                <i data-lucide="${avatarIcon}"></i>
+            </div>
+            <div class="message-content">
+                <div class="message-header">
+                    <span class="message-sender">${sender}</span>
+                </div>
+                <div class="message-body">${content}</div>
+            </div>
+        `;
+
+        chatMessages.appendChild(div);
+        lucide.createIcons();
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+        return div;
+    }
+
+    function addLoadingMessage() {
+        const div = addMessage('system', `
+            <div class="typing-indicator">
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+            </div>
+        `);
+        div.id = 'loading-message';
+        return div;
+    }
+
+    function removeLoadingMessage() {
+        const el = document.getElementById('loading-message');
+        if (el) el.remove();
+    }
+
+    function formatResults(data) {
+        let html = `<p>${data.interpretation}</p>`;
+
+        // Show SQL in a collapsible
+        html += `
+            <details class="sql-details">
+                <summary><i data-lucide="code-2"></i> View SQL Query</summary>
+                <pre><code>${escapeHtml(data.sql)}</code></pre>
+                ${data.explanation ? `<p class="sql-explanation">${data.explanation}</p>` : ''}
+            </details>
+        `;
+
+        // Show result table if there are rows
+        if (data.results && data.results.rows && data.results.rows.length > 0) {
+            const columns = data.results.columns;
+            const rows = data.results.rows.slice(0, 20); // Show max 20 rows
+
+            html += `<div class="result-table-wrapper">
+                <table class="result-table">
+                    <thead>
+                        <tr>${columns.map(c => `<th>${escapeHtml(c)}</th>`).join('')}</tr>
+                    </thead>
+                    <tbody>
+                        ${rows.map(row => `
+                            <tr>${columns.map(c => `<td>${formatCell(row[c])}</td>`).join('')}</tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>`;
+
+            if (data.results.row_count > 20) {
+                html += `<p class="table-note">Showing 20 of ${data.results.row_count} rows</p>`;
+            }
+        }
+
+        return html;
+    }
+
+    function formatCell(value) {
+        if (value === null || value === undefined) return '<span class="null-value">NULL</span>';
+        if (typeof value === 'number') {
+            return Number.isInteger(value) ? value.toLocaleString() : value.toLocaleString(undefined, {maximumFractionDigits: 4});
+        }
+        return escapeHtml(String(value));
+    }
+
+    function escapeHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
+    async function sendMessage() {
+        const question = chatInput.value.trim();
+        if (!question || isProcessing) return;
+
+        isProcessing = true;
+        chatInput.value = '';
+        chatInput.style.height = 'auto';
+
+        // Add user message
+        addMessage('user', `<p>${escapeHtml(question)}</p>`);
+
+        // Add loading indicator
+        addLoadingMessage();
+
+        try {
+            const response = await fetch('/api/query/nl', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    question: question,
+                    dataset_id: datasetId,
+                }),
+            });
+
+            removeLoadingMessage();
+
+            if (!response.ok) {
+                const err = await response.json();
+                addMessage('system', `<p class="error-text">Error: ${err.detail || 'Something went wrong'}</p>`);
+            } else {
+                const data = await response.json();
+                if (data.error) {
+                    addMessage('system', `<p class="error-text">${data.interpretation || data.error}</p>`);
+                } else {
+                    addMessage('system', formatResults(data));
+                }
+            }
+        } catch (error) {
+            removeLoadingMessage();
+            addMessage('system', `<p class="error-text">Connection error: ${error.message}</p>`);
+        }
+
+        isProcessing = false;
+        chatInput.focus();
+    }
+
+    function toggleChatSidebar() {
+        document.getElementById('chat-sidebar').classList.toggle('collapsed');
+    }
+</script>
+{% endblock %}

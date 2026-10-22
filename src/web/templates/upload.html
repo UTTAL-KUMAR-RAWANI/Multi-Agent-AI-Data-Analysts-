@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+
+{% block title %}Upload Dataset — DataMind AI{% endblock %}
+{% block page_title %}Upload Dataset{% endblock %}
+
+{% block content %}
+<div class="upload-page">
+    <!-- Drop Zone -->
+    <div class="upload-zone" id="upload-zone">
+        <div class="upload-zone-content">
+            <div class="upload-icon">
+                <i data-lucide="upload-cloud"></i>
+            </div>
+            <h2>Drop your data file here</h2>
+            <p>or click to browse files</p>
+            <div class="upload-formats">
+                <span class="format-badge">.CSV</span>
+                <span class="format-badge">.XLSX</span>
+                <span class="format-badge">.XLS</span>
+                <span class="format-badge">.JSON</span>
+            </div>
+            <p class="upload-limit">Max file size: 500 MB</p>
+        </div>
+        <input type="file" id="file-input" accept=".csv,.xlsx,.xls,.json" hidden>
+    </div>
+
+    <!-- Upload Progress (hidden by default) -->
+    <div class="upload-progress" id="upload-progress" style="display: none;">
+        <div class="progress-card">
+            <div class="progress-header">
+                <div class="progress-icon">
+                    <i data-lucide="loader-2" class="spin"></i>
+                </div>
+                <div class="progress-info">
+                    <h3 id="upload-filename">Uploading...</h3>
+                    <p id="upload-status">Processing your file...</p>
+                </div>
+            </div>
+            <div class="progress-bar-container">
+                <div class="progress-bar" id="progress-bar"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success Card (hidden by default) -->
+    <div class="upload-success" id="upload-success" style="display: none;">
+        <div class="success-card glass-card">
+            <div class="success-icon">
+                <i data-lucide="check-circle-2"></i>
+            </div>
+            <h2>Dataset Loaded Successfully!</h2>
+
+            <div class="success-details" id="success-details">
+                <!-- Populated by JS -->
+            </div>
+
+            <div class="success-actions">
+                <a href="#" class="btn btn-primary btn-lg" id="btn-start-chat">
+                    <i data-lucide="message-circle"></i>
+                    <span>Start Asking Questions</span>
+                </a>
+                <button class="btn btn-secondary" onclick="resetUpload()" id="btn-upload-another">
+                    <i data-lucide="plus"></i>
+                    <span>Upload Another</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const dropZone = document.getElementById('upload-zone');
+    const fileInput = document.getElementById('file-input');
+    const progressSection = document.getElementById('upload-progress');
+    const successSection = document.getElementById('upload-success');
+
+    // Click to upload
+    dropZone.addEventListener('click', () => fileInput.click());
+
+    // Drag & drop
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('drag-over');
+    });
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('drag-over');
+    });
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('drag-over');
+        if (e.dataTransfer.files.length > 0) {
+            uploadFile(e.dataTransfer.files[0]);
+        }
+    });
+
+    // File input change
+    fileInput.addEventListener('change', () => {
+        if (fileInput.files.length > 0) {
+            uploadFile(fileInput.files[0]);
+        }
+    });
+
+    async function uploadFile(file) {
+        // Show progress
+        dropZone.style.display = 'none';
+        progressSection.style.display = 'block';
+        document.getElementById('upload-filename').textContent = file.name;
+        document.getElementById('upload-status').textContent = 'Uploading and analyzing...';
+
+        const progressBar = document.getElementById('progress-bar');
+        progressBar.style.width = '30%';
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            progressBar.style.width = '60%';
+
+            const response = await fetch('/api/datasets/upload', {
+                method: 'POST',
+                body: formData,
+            });
+
+            progressBar.style.width = '90%';
+
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.detail || 'Upload failed');
+            }
+
+            const data = await response.json();
+            progressBar.style.width = '100%';
+
+            // Show success after a brief delay
+            setTimeout(() => showSuccess(data), 500);
+
+        } catch (error) {
+            progressSection.style.display = 'none';
+            dropZone.style.display = 'flex';
+            showToast('Upload failed: ' + error.message, 'error');
+        }
+    }
+
+    function showSuccess(data) {
+        progressSection.style.display = 'none';
+        successSection.style.display = 'block';
+
+        const details = document.getElementById('success-details');
+        details.innerHTML = `
+            <div class="detail-grid">
+                <div class="detail-item">
+                    <span class="detail-label">File</span>
+                    <span class="detail-value">${data.file_name}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Rows</span>
+                    <span class="detail-value">${data.num_rows.toLocaleString()}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Columns</span>
+                    <span class="detail-value">${data.num_columns}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Memory</span>
+                    <span class="detail-value">${data.memory_usage_mb} MB</span>
+                </div>
+            </div>
+            <div class="columns-preview">
+                <h4>Columns</h4>
+                <div class="column-tags">
+                    ${data.columns.map(c =>
+                        `<span class="column-tag" title="${c.dtype}">${c.name} <small>${c.dtype}</small></span>`
+                    ).join('')}
+                </div>
+            </div>
+            ${data.has_missing ? `
+                <div class="missing-warning">
+                    <i data-lucide="alert-triangle"></i>
+                    <span>Missing values detected in ${Object.keys(data.missing_summary).length} column(s)</span>
+                </div>
+            ` : ''}
+        `;
+
+        document.getElementById('btn-start-chat').href = `/chat/${data.dataset_id}`;
+        lucide.createIcons();
+    }
+
+    function resetUpload() {
+        successSection.style.display = 'none';
+        dropZone.style.display = 'flex';
+        fileInput.value = '';
+    }
+</script>
+{% endblock %}

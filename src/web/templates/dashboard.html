@@ -1,0 +1,587 @@
+{% extends "base.html" %}
+
+{% block title %}DataMind AI — Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block top_actions %}
+<a href="/upload" class="btn btn-primary" id="btn-upload-new">
+    <i data-lucide="plus"></i>
+    <span>New Dataset</span>
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <!-- Stats Row -->
+    <div class="stats-row">
+        <div class="stat-card" id="stat-datasets">
+            <div class="stat-icon">
+                <i data-lucide="database"></i>
+            </div>
+            <div class="stat-info">
+                <span class="stat-value">{{ datasets | length }}</span>
+                <span class="stat-label">Datasets Loaded</span>
+            </div>
+        </div>
+        <div class="stat-card" id="stat-rows">
+            <div class="stat-icon">
+                <i data-lucide="rows-3"></i>
+            </div>
+            <div class="stat-info">
+                <span class="stat-value">{{ '{:,}'.format(datasets | sum(attribute='num_rows')) if datasets else '0' }}</span>
+                <span class="stat-label">Total Rows</span>
+            </div>
+        </div>
+        <div class="stat-card" id="stat-agents">
+            <div class="stat-icon">
+                <i data-lucide="bot"></i>
+            </div>
+            <div class="stat-info">
+                <span class="stat-value">9</span>
+                <span class="stat-label">AI Agents</span>
+            </div>
+        </div>
+        <div class="stat-card" id="stat-status">
+            <div class="stat-icon stat-icon-success">
+                <i data-lucide="activity"></i>
+            </div>
+            <div class="stat-info">
+                <span class="stat-value">Ready</span>
+                <span class="stat-label">System Status</span>
+            </div>
+        </div>
+    </div>
+
+
+    {% if datasets %}
+
+    <!-- Datasets Grid -->
+    <div class="section-header">
+        <h2>Your Datasets</h2>
+        <span class="badge">{{ datasets | length }}</span>
+    </div>
+
+    <div class="datasets-grid">
+        {% for ds in datasets %}
+        <div class="dataset-card" id="dataset-{{ ds.dataset_id }}">
+            <div class="dataset-card-header">
+                <div class="dataset-icon">
+                    <i data-lucide="file-spreadsheet"></i>
+                </div>
+                <div class="dataset-actions">
+                    <button class="btn-icon" onclick="deleteDataset('{{ ds.dataset_id }}')" title="Delete dataset" aria-label="Delete dataset">
+                        <i data-lucide="trash-2"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="dataset-card-body">
+                <h3 class="dataset-name">{{ ds.file_name }}</h3>
+                <div class="dataset-meta">
+                    <span><i data-lucide="rows-3"></i> <strong>{{ '{:,}'.format(ds.num_rows) }}</strong> <small>rows</small></span>
+                    <span><i data-lucide="columns-3"></i> <strong>{{ ds.num_columns }}</strong> <small>cols</small></span>
+                    <span><i data-lucide="hard-drive"></i> <strong>{{ ds.memory_usage_mb }}</strong> <small>MB</small></span>
+                </div>
+                {% if ds.has_missing %}
+                <div class="dataset-warning">
+                    <i data-lucide="alert-triangle"></i>
+                    <span>{{ ds.missing_summary | length }} columns with missing values</span>
+                </div>
+                {% endif %}
+            </div>
+            <div class="dataset-card-footer" style="display: flex; gap: 0.5rem;">
+                <a href="/analysis/{{ ds.dataset_id }}" class="btn btn-primary btn-sm" id="btn-analyze-{{ ds.dataset_id }}">
+                    <i data-lucide="zap"></i>
+                    <span>Analyze Studio</span>
+                </a>
+                <a href="/chat/{{ ds.dataset_id }}" class="btn btn-secondary btn-sm" id="btn-chat-{{ ds.dataset_id }}">
+                    <i data-lucide="message-circle"></i>
+                    <span>Chat</span>
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% else %}
+    <!-- Empty State -->
+    <div class="empty-state">
+        <div class="empty-icon">
+            <i data-lucide="database"></i>
+        </div>
+        <h2>No Datasets Yet</h2>
+        <p>Upload a CSV, Excel, or JSON file to start analyzing your data with AI.</p>
+        <a href="/upload" class="btn btn-primary btn-lg" id="btn-empty-upload">
+            <i data-lucide="upload-cloud"></i>
+            <span>Upload Your First Dataset</span>
+        </a>
+    </div>
+    {% endif %}
+
+    <!-- Agent Overview -->
+    <div class="section-header" style="margin-top: 2rem;">
+        <h2>AI Agents</h2>
+        <span class="badge">9 Specialists</span>
+    </div>
+
+    <div class="agents-grid">
+        <div class="agent-card">
+            <div class="agent-emoji">🧠</div>
+            <h4>Supervisor</h4>
+            <p>Orchestrates tasks</p>
+        </div>
+        <div class="agent-card">
+            <div class="agent-emoji">🧹</div>
+            <h4>Data Cleaner</h4>
+            <p>Fixes data quality</p>
+        </div>
+        <div class="agent-card">
+            <div class="agent-emoji">📊</div>
+            <h4>EDA Explorer</h4>
+            <p>Finds patterns</p>
+        </div>
+        <div class="agent-card">
+            <div class="agent-emoji">📈</div>
+            <h4>Statistician</h4>
+            <p>Hypothesis testing</p>
+        </div>
+        <div class="agent-card">
+            <div class="agent-emoji">🤖</div>
+            <h4>ML Engineer</h4>
+            <p>Predictive models</p>
+        </div>
+        <div class="agent-card">
+            <div class="agent-emoji">🎨</div>
+            <h4>Visualizer</h4>
+            <p>Creates charts</p>
+        </div>
+        <div class="agent-card">
+            <div class="agent-emoji">📝</div>
+            <h4>Report Writer</h4>
+            <p>Generates reports</p>
+        </div>
+        <div class="agent-card active">
+            <div class="agent-emoji">💬</div>
+            <h4>NL Query</h4>
+            <p>Ask in English</p>
+            <span class="badge badge-success">Active</span>
+        </div>
+        <div class="agent-card">
+            <div class="agent-emoji">✅</div>
+            <h4>QA Agent</h4>
+            <p>Validates outputs</p>
+        </div>
+    </div>
+</div>
+
+    <!-- Dashboard AI Copilot Floating Corner Widget -->
+    <div class="dashboard-copilot-card" id="dashboard-copilot-card">
+        <div class="copilot-header">
+            <div class="copilot-title-group">
+                <div class="copilot-avatar">
+                    <i data-lucide="bot"></i>
+                    <div class="copilot-status-dot" title="Copilot connected to live workspace"></div>
+                </div>
+                <div class="copilot-title-text">
+                    <h3>
+                        <span>Dashboard AI Copilot</span>
+                        <span class="badge-copilot">Live</span>
+                    </h3>
+                    <p>Live workspace analytics & AI agent assistant</p>
+                </div>
+            </div>
+            <div class="copilot-controls">
+                <button class="copilot-btn-icon" id="btn-copilot-clear" onclick="clearCopilot()" title="Reset Conversation" aria-label="Reset Conversation">
+                    <i data-lucide="rotate-ccw"></i>
+                </button>
+                <button class="copilot-btn-icon" id="btn-copilot-close" onclick="closeCopilot()" title="Close Copilot" aria-label="Close Copilot">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="copilot-body" id="copilot-body">
+            <div class="copilot-messages" id="copilot-messages">
+                <!-- Welcome Message -->
+                <div class="copilot-msg assistant">
+                    <div class="copilot-msg-avatar">
+                        <i data-lucide="brain-circuit"></i>
+                    </div>
+                    <div class="copilot-msg-content">
+                        <div class="copilot-msg-header">
+                            <span class="copilot-msg-sender">DataMind Copilot</span>
+                        </div>
+                        <div class="copilot-msg-bubble">
+                            <p>👋 Hello! I'm your <strong>Dashboard Copilot</strong>. I have real-time visibility into all <strong>{{ datasets | length }} loaded datasets</strong>, system health, and the 9 specialized AI agents.</p>
+                            <p style="margin-top: 6px;">Ask me anything about your data, missing values, statistical tests, or click one of these quick prompts:</p>
+                            <div class="copilot-chips-row" id="copilot-quick-chips">
+                                <button class="copilot-chip" onclick="askCopilot('Summarize all my loaded datasets')">
+                                    <i data-lucide="sparkles"></i> Summarize all datasets
+                                </button>
+                                <button class="copilot-chip" onclick="askCopilot('Which datasets have missing values or quality issues?')">
+                                    <i data-lucide="alert-triangle"></i> Check missing data
+                                </button>
+                                <button class="copilot-chip" onclick="askCopilot('What do the 9 AI specialist agents do?')">
+                                    <i data-lucide="bot"></i> Explain AI agents
+                                </button>
+                                <button class="copilot-chip" onclick="askCopilot('How do I run an analysis in Studio?')">
+                                    <i data-lucide="zap"></i> How to run Studio analysis
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input Area -->
+            <div class="copilot-input-area">
+                <div class="copilot-input-container">
+                    <textarea
+                        id="copilot-input"
+                        class="copilot-textarea"
+                        placeholder="Ask anything about your dashboard, datasets, or agents... (e.g. 'Which dataset has the most rows?')"
+                        rows="1"
+                    ></textarea>
+                    <button class="copilot-send-btn" id="btn-copilot-send" onclick="sendCopilotMessage()" title="Send question" aria-label="Send question">
+                        <i data-lucide="send-horizontal"></i>
+                    </button>
+                </div>
+                <div class="copilot-footer-hints">
+                    <span>Press <kbd style="background: rgba(255,255,255,0.08); padding: 1px 5px; border-radius: 4px;">Enter</kbd> to send</span>
+                    <span class="copilot-badge-live">● Live Connected</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Action Launcher at Corner -->
+    <button class="copilot-fab" id="copilot-fab" onclick="toggleCopilot()" title="Ask Dashboard Copilot" aria-label="Ask Dashboard Copilot">
+        <span class="copilot-fab-pulse"></span>
+        <i data-lucide="message-square-code" id="copilot-fab-icon"></i>
+        <span id="copilot-fab-label">Ask Copilot</span>
+    </button>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Fetch health status
+    fetch('/health')
+        .then(r => r.json())
+        .then(data => {
+            const badge = document.getElementById('provider-badge');
+            badge.innerHTML = `
+                <div class="provider-dot provider-dot-active"></div>
+                <span>${data.providers.join(', ')}</span>
+            `;
+        })
+        .catch(() => {
+            const badge = document.getElementById('provider-badge');
+            badge.innerHTML = `
+                <div class="provider-dot provider-dot-error"></div>
+                <span>Disconnected</span>
+            `;
+        });
+
+    // ─── Dashboard AI Copilot Client ──────────────────────────
+    const copilotCard = document.getElementById('dashboard-copilot-card');
+    const copilotBody = document.getElementById('copilot-body');
+    const copilotMessages = document.getElementById('copilot-messages');
+    const copilotInput = document.getElementById('copilot-input');
+    const copilotSendBtn = document.getElementById('btn-copilot-send');
+    let isCopilotProcessing = false;
+    let copilotHistory = [];
+
+    // Auto-resize copilot textarea
+    if (copilotInput) {
+        copilotInput.addEventListener('input', () => {
+            copilotInput.style.height = 'auto';
+            copilotInput.style.height = Math.min(copilotInput.scrollHeight, 140) + 'px';
+        });
+
+        copilotInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendCopilotMessage();
+            }
+        });
+    }
+
+    function toggleCopilot() {
+        if (!copilotCard) return;
+        const isOpen = copilotCard.classList.toggle('active');
+        const fabIcon = document.getElementById('copilot-fab-icon');
+        const fabLabel = document.getElementById('copilot-fab-label');
+        if (isOpen) {
+            if (fabIcon) fabIcon.setAttribute('data-lucide', 'x');
+            if (fabLabel) fabLabel.textContent = 'Close';
+            if (copilotInput) setTimeout(() => copilotInput.focus(), 250);
+        } else {
+            if (fabIcon) fabIcon.setAttribute('data-lucide', 'message-square-code');
+            if (fabLabel) fabLabel.textContent = 'Ask Copilot';
+        }
+        if (window.lucide) lucide.createIcons();
+    }
+
+    function closeCopilot() {
+        if (!copilotCard) return;
+        copilotCard.classList.remove('active');
+        const fabIcon = document.getElementById('copilot-fab-icon');
+        const fabLabel = document.getElementById('copilot-fab-label');
+        if (fabIcon) fabIcon.setAttribute('data-lucide', 'message-square-code');
+        if (fabLabel) fabLabel.textContent = 'Ask Copilot';
+        if (window.lucide) lucide.createIcons();
+    }
+
+    function openCopilot() {
+        if (!copilotCard) return;
+        if (!copilotCard.classList.contains('active')) {
+            toggleCopilot();
+        } else if (copilotInput) {
+            copilotInput.focus();
+        }
+    }
+
+    function focusCopilotChat() {
+        openCopilot();
+    }
+
+    function askCopilot(question) {
+        openCopilot();
+        if (copilotInput) {
+            copilotInput.value = question;
+            sendCopilotMessage();
+        }
+    }
+
+    function clearCopilot() {
+        copilotHistory = [];
+        if (!copilotMessages) return;
+        copilotMessages.innerHTML = `
+            <div class="copilot-msg assistant">
+                <div class="copilot-msg-avatar">
+                    <i data-lucide="brain-circuit"></i>
+                </div>
+                <div class="copilot-msg-content">
+                    <div class="copilot-msg-header">
+                        <span class="copilot-msg-sender">DataMind Copilot</span>
+                    </div>
+                    <div class="copilot-msg-bubble">
+                        <p>👋 Conversation reset! I'm ready for any question about your dashboard, datasets, or AI specialists.</p>
+                        <div class="copilot-chips-row">
+                            <button class="copilot-chip" onclick="askCopilot('Summarize all my loaded datasets')">
+                                <i data-lucide="sparkles"></i> Summarize all datasets
+                            </button>
+                            <button class="copilot-chip" onclick="askCopilot('Which datasets have missing values or quality issues?')">
+                                <i data-lucide="alert-triangle"></i> Check missing data
+                            </button>
+                            <button class="copilot-chip" onclick="askCopilot('What do the 9 AI specialist agents do?')">
+                                <i data-lucide="bot"></i> Explain AI agents
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        lucide.createIcons();
+        showToast('Copilot conversation reset', 'info');
+    }
+
+    function formatMarkdown(text) {
+        if (!text) return '';
+        let escaped = text
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+
+        // Pre/code blocks
+        escaped = escaped.replace(/```([a-z]*)\n?([\s\S]*?)```/g, '<pre><code>$2</code></pre>');
+        // Inline code
+        escaped = escaped.replace(/`([^`]+)`/g, '<code>$1</code>');
+        // Headings
+        escaped = escaped.replace(/^#### (.*$)/gim, '<h5 style="color:#ffffff; margin:6px 0;">$1</h5>');
+        escaped = escaped.replace(/^### (.*$)/gim, '<h4 style="color:#ffffff; margin:8px 0 4px;">$1</h4>');
+        escaped = escaped.replace(/^## (.*$)/gim, '<h3 style="color:#ffffff; margin:10px 0 6px;">$1</h3>');
+        // Bold & Italics
+        escaped = escaped.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+        escaped = escaped.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+        // Markdown Links: [text](url)
+        escaped = escaped.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+        // List items
+        escaped = escaped.replace(/^\s*[-*]\s+(.*$)/gim, '<li>$1</li>');
+        escaped = escaped.replace(/(<li>.*<\/li>)/gms, '<ul>$1</ul>');
+        escaped = escaped.replace(/<\/ul>\s*<ul>/g, '');
+
+        // Paragraphs
+        const blocks = escaped.split(/\n{2,}/);
+        return blocks.map(b => {
+            const trimmed = b.trim();
+            if (!trimmed) return '';
+            if (trimmed.startsWith('<h') || trimmed.startsWith('<ul') || trimmed.startsWith('<pre')) {
+                return trimmed;
+            }
+            return `<p>${trimmed.replace(/\n/g, '<br>')}</p>`;
+        }).join('');
+    }
+
+    function addCopilotLoadingIndicator() {
+        const div = document.createElement('div');
+        div.className = 'copilot-msg assistant';
+        div.id = 'copilot-loading-msg';
+        div.innerHTML = `
+            <div class="copilot-msg-avatar">
+                <i data-lucide="brain-circuit"></i>
+            </div>
+            <div class="copilot-msg-content">
+                <div class="copilot-msg-header">
+                    <span class="copilot-msg-sender">DataMind Copilot</span>
+                </div>
+                <div class="copilot-msg-bubble">
+                    <div class="typing-indicator" style="display: flex; gap: 4px; padding: 4px 0;">
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                    </div>
+                </div>
+            </div>
+        `;
+        copilotMessages.appendChild(div);
+        lucide.createIcons();
+        copilotMessages.scrollTop = copilotMessages.scrollHeight;
+    }
+
+    function removeCopilotLoadingIndicator() {
+        const el = document.getElementById('copilot-loading-msg');
+        if (el) el.remove();
+    }
+
+    function appendCopilotMessage(role, rawContent, actions = [], quickReplies = []) {
+        const div = document.createElement('div');
+        div.className = `copilot-msg ${role}`;
+
+        const avatarIcon = role === 'user' ? 'user' : 'brain-circuit';
+        const sender = role === 'user' ? 'You' : 'DataMind Copilot';
+        const formattedBody = role === 'user'
+            ? `<p>${rawContent.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>`
+            : formatMarkdown(rawContent);
+
+        let actionsHtml = '';
+        if (actions && actions.length > 0) {
+            actionsHtml = `
+                <div class="copilot-actions-row">
+                    ${actions.map(act => `
+                        <a href="${act.url}" class="copilot-action-pill" id="action-${act.label.toLowerCase().replace(/[^a-z0-9]/g, '-')}">
+                            <i data-lucide="${act.icon || 'arrow-right'}"></i>
+                            <span>${act.label}</span>
+                        </a>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        let quickRepliesHtml = '';
+        if (quickReplies && quickReplies.length > 0) {
+            quickRepliesHtml = `
+                <div class="copilot-chips-row">
+                    ${quickReplies.map(reply => `
+                        <button class="copilot-chip" onclick="askCopilot('${reply.replace(/'/g, "\\'")}')">
+                            <i data-lucide="sparkles"></i>
+                            <span>${reply}</span>
+                        </button>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        div.innerHTML = `
+            <div class="copilot-msg-avatar">
+                <i data-lucide="${avatarIcon}"></i>
+            </div>
+            <div class="copilot-msg-content">
+                <div class="copilot-msg-header">
+                    <span class="copilot-msg-sender">${sender}</span>
+                </div>
+                <div class="copilot-msg-bubble">
+                    ${formattedBody}
+                    ${actionsHtml}
+                    ${quickRepliesHtml}
+                </div>
+            </div>
+        `;
+
+        copilotMessages.appendChild(div);
+        lucide.createIcons();
+        copilotMessages.scrollTop = copilotMessages.scrollHeight;
+    }
+
+    async function sendCopilotMessage() {
+        if (!copilotInput || isCopilotProcessing) return;
+        const message = copilotInput.value.trim();
+        if (!message) return;
+
+        isCopilotProcessing = true;
+        copilotSendBtn.disabled = true;
+        copilotInput.value = '';
+        copilotInput.style.height = 'auto';
+
+        // Render user message
+        appendCopilotMessage('user', message);
+        copilotHistory.push({ role: 'user', content: message });
+
+        // Show typing indicator
+        addCopilotLoadingIndicator();
+
+        try {
+            const resp = await fetch('/api/dashboard/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    message: message,
+                    history: copilotHistory.slice(-6),
+                }),
+            });
+
+            removeCopilotLoadingIndicator();
+
+            if (!resp.ok) {
+                const errData = await resp.json().catch(() => ({}));
+                appendCopilotMessage(
+                    'assistant',
+                    `⚠️ Error: ${errData.detail || 'Unable to process dashboard question at this moment.'}`
+                );
+            } else {
+                const data = await resp.json();
+                appendCopilotMessage(
+                    'assistant',
+                    data.reply,
+                    data.suggested_actions || [],
+                    data.quick_replies || []
+                );
+                copilotHistory.push({ role: 'assistant', content: data.reply });
+            }
+        } catch (error) {
+            removeCopilotLoadingIndicator();
+            appendCopilotMessage('assistant', `⚠️ Connection error: ${error.message}. Please verify the server is running.`);
+        } finally {
+            isCopilotProcessing = false;
+            copilotSendBtn.disabled = false;
+            if (copilotInput) copilotInput.focus();
+        }
+    }
+
+    async function deleteDataset(datasetId) {
+        if (!confirm('Remove this dataset from workspace?')) return;
+
+        try {
+            const resp = await fetch(`/api/datasets/${datasetId}`, { method: 'DELETE' });
+            if (resp.ok) {
+                document.getElementById(`dataset-${datasetId}`).remove();
+                showToast('Dataset removed', 'success');
+            } else {
+                showToast('Failed to remove dataset', 'error');
+            }
+        } catch (e) {
+            showToast('Error: ' + e.message, 'error');
+        }
+    }
+</script>
+{% endblock %}
+

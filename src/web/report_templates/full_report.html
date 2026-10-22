@@ -1,0 +1,1336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ title or (dataset_name ~ " — Executive BI Dashboard") }}</title>
+    <!-- Google Fonts: Display (Outfit), Body/Interface (Plus Jakarta Sans), Data/Metrics (JetBrains Mono) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,500&display=swap" rel="stylesheet">
+    <!-- Plotly.js for interactive chart rendering -->
+    <script src="/static/js/plotly.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+    <style>
+        :root {
+            --bg: #f4f6fa;
+            --card: #ffffff;
+            --ink: #111827;
+            --muted: #64748b;
+            --line: #e2e8f0;
+            --accent: #2563eb;
+            --accent-light: #eff6ff;
+            --success: #10b981;
+            --warning: #f59e0b;
+
+            /* Typography */
+            --font-display: 'Outfit', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+            --font-sans: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
+            --font-mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+        }
+
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            background: var(--bg);
+            font-family: var(--font-sans);
+            color: var(--ink);
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            text-rendering: optimizeLegibility;
+            padding-bottom: 50px;
+        }
+
+        /* Executive Dark Header */
+        header {
+            background: #0f172a;
+            color: #ffffff;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+            width: 100%;
+        }
+
+        .header-inner {
+            max-width: 1500px;
+            margin: 0 auto;
+            padding: 32px clamp(18px, 3vw, 40px) 28px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .header-text {
+            flex: 1;
+            min-width: 280px;
+        }
+
+        .eyebrow {
+            font-family: var(--font-sans);
+            font-size: 11px;
+            letter-spacing: .15em;
+            text-transform: uppercase;
+            color: #93c5fd;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        h1 {
+            font-family: var(--font-display);
+            font-size: clamp(26px, 3vw, 38px);
+            line-height: 1.15;
+            margin: 8px 0 10px;
+            letter-spacing: -.03em;
+            font-weight: 750;
+        }
+
+        header p {
+            font-family: var(--font-sans);
+            color: #cbd5e1;
+            max-width: 880px;
+            margin: 0;
+            line-height: 1.6;
+            font-size: 14.5px;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .btn-header {
+            background: rgba(255, 255, 255, 0.08);
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            padding: 9px 16px;
+            border-radius: 8px;
+            font-family: var(--font-sans);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            text-decoration: none;
+        }
+
+        .btn-header:hover {
+            background: rgba(255, 255, 255, 0.16);
+            border-color: rgba(255, 255, 255, 0.3);
+            transform: translateY(-1px);
+        }
+
+        /* Canvas Main */
+        main {
+            max-width: 1500px;
+            margin: 0 auto;
+            padding: 28px clamp(18px, 3vw, 40px) 48px;
+        }
+
+        /* KPIs Ribbon Grid */
+        .kpis {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin-bottom: 28px;
+        }
+
+        .kpi, .panel, .insight {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            box-shadow: 0 3px 14px rgba(26, 44, 77, 0.04);
+        }
+
+        .kpi {
+            padding: 19px 20px;
+            transition: transform 0.18s ease, box-shadow 0.18s ease;
+        }
+
+        .kpi:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(26, 44, 77, 0.08);
+        }
+
+        .kpi .label {
+            font-family: var(--font-sans);
+            font-size: 11px;
+            color: var(--muted);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+        }
+
+        .kpi .value {
+            font-family: var(--font-display);
+            font-size: clamp(22px, 2.2vw, 30px);
+            font-weight: 750;
+            letter-spacing: -.03em;
+            margin-top: 8px;
+            color: var(--ink);
+            font-variant-numeric: tabular-nums lining-nums;
+        }
+
+        .kpi .sub {
+            font-family: var(--font-sans);
+            font-size: 12px;
+            color: var(--muted);
+            margin-top: 4px;
+            font-variant-numeric: tabular-nums lining-nums;
+        }
+
+        /* Section Titles */
+        .section-title {
+            font-family: var(--font-display);
+            font-size: 1.25rem;
+            letter-spacing: -.02em;
+            margin: 32px 0 16px;
+            font-weight: 700;
+            color: var(--ink);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        /* Charts Grid */
+        .charts {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(min(100%, 480px), 1fr));
+            gap: 18px;
+            margin-bottom: 28px;
+        }
+
+        .panel {
+            padding: 20px;
+            min-width: 0;
+            overflow: hidden;
+        }
+
+        .panel h2 {
+            font-family: var(--font-display);
+            font-size: 16px;
+            margin: 0 0 14px 0;
+            font-weight: 650;
+            letter-spacing: -.015em;
+            color: var(--ink);
+        }
+
+        /* Standout Insights */
+        .insights {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .insight {
+            padding: 20px 22px;
+            border-left: 4px solid var(--accent);
+        }
+
+        .insight:nth-child(2) {
+            border-left-color: #0ea5e9;
+        }
+
+        .insight:nth-child(3) {
+            border-left-color: var(--success);
+        }
+
+        .insight h3 {
+            font-family: var(--font-display);
+            font-size: 15px;
+            margin: 0 0 8px;
+            font-weight: 650;
+            color: var(--ink);
+        }
+
+        .insight p {
+            font-family: var(--font-sans);
+            font-size: 13.5px;
+            line-height: 1.6;
+            color: #475569;
+            margin: 0;
+        }
+
+        .note {
+            font-size: 12px;
+            color: var(--muted);
+            line-height: 1.55;
+            margin: 14px 2px 24px;
+        }
+
+        /* Interactive Data Explorer Table */
+        .table-panel {
+            padding: 22px;
+        }
+
+        .table-tools {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin: 12px 0 16px;
+        }
+
+        input, select {
+            font: inherit;
+            border: 1px solid #d8deea;
+            border-radius: 9px;
+            padding: 9px 14px;
+            background: #fff;
+            color: var(--ink);
+            outline: none;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+            height: 40px;
+            box-sizing: border-box;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        input:focus, select:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(36, 89, 211, 0.12);
+        }
+
+        input {
+            flex: 1;
+            min-width: 240px;
+        }
+
+        select {
+            min-width: 180px;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2364748b' viewBox='0 0 16 16'%3E%3Cpath d='M8 11.5l-5-5h10l-5 5z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            padding-right: 32px;
+            cursor: pointer;
+        }
+
+        .btn-export {
+            height: 40px;
+            box-sizing: border-box;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #ffffff;
+            color: #334155;
+            border: 1px solid #cbd5e1;
+            border-radius: 9px;
+            padding: 0 16px;
+            font-family: var(--font-sans);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            margin-left: auto;
+            text-decoration: none;
+        }
+
+        .btn-export:hover {
+            background: #f1f5f9;
+            color: #0f172a;
+            border-color: #94a3b8;
+            transform: translateY(-1px);
+        }
+
+        .table-wrap {
+            overflow: auto;
+            max-height: 560px;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            background: #fff;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12.5px;
+            white-space: nowrap;
+        }
+
+        th {
+            position: sticky;
+            top: 0;
+            background: #f1f5f9;
+            text-align: left;
+            vertical-align: middle;
+            color: #475569;
+            padding: 11px 14px;
+            font-family: var(--font-sans);
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.15s ease;
+            z-index: 10;
+        }
+
+        th:hover {
+            background: #e2e8f0;
+            color: var(--ink);
+        }
+
+        td {
+            padding: 10px 14px;
+            vertical-align: middle;
+            border-top: 1px solid #edf0f5;
+            color: #1e293b;
+            font-family: var(--font-mono);
+            font-size: 12px;
+            font-variant-numeric: tabular-nums lining-nums slashed-zero;
+            letter-spacing: -0.01em;
+        }
+
+        tbody tr:hover {
+            background: #f8faff;
+        }
+
+        .footer {
+            font-size: 12px;
+            color: #778196;
+            margin-top: 32px;
+            padding-top: 18px;
+            border-top: 1px solid var(--line);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        /* ═══════════════════════════════════════════════════════════
+           Report AI Copilot Corner Widget (Clean BI Palette)
+           ═══════════════════════════════════════════════════════════ */
+        .report-copilot-card {
+            position: fixed;
+            bottom: 84px;
+            right: 28px;
+            width: 440px;
+            max-width: calc(100vw - 36px);
+            height: 580px;
+            max-height: calc(100vh - 120px);
+            background: rgba(255, 255, 255, 0.98);
+            border: 1px solid #d8deea;
+            border-radius: 18px;
+            box-shadow: 0 16px 45px rgba(22, 32, 51, 0.16), 0 0 1px rgba(22, 32, 51, 0.1);
+            margin: 0;
+            overflow: hidden;
+            backdrop-filter: blur(16px);
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(16px) scale(0.96);
+            transition: opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1), transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+            font-family: inherit;
+            color: var(--ink);
+        }
+
+        .report-copilot-card.active {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateY(0) scale(1);
+        }
+
+        .report-copilot-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 18px;
+            background: #101a2e;
+            color: #ffffff;
+            flex-shrink: 0;
+        }
+
+        .report-copilot-title-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .report-copilot-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #2459d3 0%, #3b82f6 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .report-status-dot {
+            position: absolute;
+            bottom: -2px;
+            right: -2px;
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: #10b981;
+            border: 2px solid #101a2e;
+            box-shadow: 0 0 6px #10b981;
+            animation: reportPulse 2s infinite;
+        }
+
+        @keyframes reportPulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(1.15); }
+        }
+
+        .report-copilot-title-text {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .report-copilot-h3 {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 0;
+        }
+
+        .report-copilot-badge {
+            font-size: 0.68rem;
+            font-weight: 700;
+            padding: 2px 7px;
+            border-radius: 999px;
+            background: rgba(36, 89, 211, 0.35);
+            color: #9fb8f7;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .report-copilot-title-text p {
+            font-size: 0.74rem;
+            color: #c4ccda;
+            margin: 2px 0 0 0;
+            max-width: 230px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .report-copilot-controls {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .report-btn-icon {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #ffffff;
+            width: 30px;
+            height: 30px;
+            border-radius: 7px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .report-btn-icon:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .report-copilot-body {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            overflow: hidden;
+            background: #ffffff;
+        }
+
+        .report-copilot-messages {
+            flex: 1;
+            min-height: 0;
+            max-height: none;
+            overflow-y: auto;
+            padding: 16px 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            scroll-behavior: smooth;
+        }
+
+        .report-copilot-messages::-webkit-scrollbar {
+            width: 6px;
+        }
+        .report-copilot-messages::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 999px;
+        }
+
+        .report-msg {
+            display: flex;
+            gap: 10px;
+            animation: reportMsgIn 0.2s ease-out;
+        }
+
+        @keyframes reportMsgIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .report-msg.user {
+            flex-direction: row-reverse;
+        }
+
+        .report-msg-avatar {
+            width: 30px;
+            height: 30px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            background: var(--accent-light);
+            color: var(--accent);
+            border: 1px solid #d8deea;
+        }
+
+        .report-msg.user .report-msg-avatar {
+            background: #f1f5f9;
+            color: #475569;
+        }
+
+        .report-msg-content {
+            max-width: 82%;
+            min-width: 140px;
+        }
+
+        .report-msg-header {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 3px;
+        }
+
+        .report-msg.user .report-msg-header {
+            justify-content: flex-end;
+        }
+
+        .report-msg-sender {
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: var(--muted);
+        }
+
+        .report-msg-bubble {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 12px 14px;
+            font-size: 0.88rem;
+            line-height: 1.55;
+            color: var(--ink);
+        }
+
+        .report-msg.user .report-msg-bubble {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #ffffff;
+        }
+
+        .report-msg-bubble h3, .report-msg-bubble h4 {
+            color: var(--ink);
+            margin: 6px 0 4px 0;
+            font-size: 0.92rem;
+        }
+        .report-msg.user .report-msg-bubble h3, .report-msg.user .report-msg-bubble h4 { color: #fff; }
+        .report-msg-bubble h3:first-child, .report-msg-bubble h4:first-child { margin-top: 0; }
+        .report-msg-bubble ul, .report-msg-bubble ol { margin: 6px 0 6px 18px; }
+        .report-msg-bubble li { margin-bottom: 3px; }
+        .report-msg-bubble strong { color: var(--ink); }
+        .report-msg.user .report-msg-bubble strong { color: #fff; }
+
+        .report-mini-kpis {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin: 8px 0;
+        }
+
+        .mini-kpi {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 0.74rem;
+            color: #334155;
+        }
+
+        .report-chips-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .report-chip {
+            padding: 5px 11px;
+            background: var(--accent-light);
+            border: 1px solid #c7d7fa;
+            border-radius: 999px;
+            font-size: 0.76rem;
+            color: var(--accent);
+            cursor: pointer;
+            transition: all 0.15s ease;
+            font-family: inherit;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-weight: 600;
+        }
+
+        .report-chip:hover {
+            background: var(--accent);
+            color: #ffffff;
+            border-color: var(--accent);
+            transform: translateY(-1px);
+        }
+
+        .report-copilot-input-area {
+            padding: 12px 16px;
+            background: #f8fafc;
+            border-top: 1px solid #e2e8f0;
+            flex-shrink: 0;
+        }
+
+        .report-copilot-input-container {
+            display: flex;
+            align-items: flex-end;
+            gap: 8px;
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            padding: 6px 8px 6px 12px;
+            transition: border-color 0.15s ease;
+        }
+
+        .report-copilot-input-container:focus-within {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(36, 89, 211, 0.12);
+        }
+
+        .report-copilot-textarea {
+            flex: 1;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: var(--ink);
+            font-family: inherit;
+            font-size: 0.86rem;
+            line-height: 1.45;
+            resize: none;
+            max-height: 110px;
+            padding: 6px 0;
+        }
+
+        .report-copilot-textarea::placeholder {
+            color: #94a3b8;
+        }
+
+        .report-send-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: var(--accent);
+            border: none;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: all 0.15s ease;
+        }
+
+        .report-send-btn:hover:not(:disabled) {
+            background: #1b47b0;
+            transform: translateY(-1px);
+        }
+
+        .report-send-btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        .report-copilot-hints {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 6px;
+            padding: 0 2px;
+            font-size: 0.72rem;
+            color: var(--muted);
+        }
+
+        .report-copilot-fab {
+            position: fixed;
+            bottom: 28px;
+            right: 28px;
+            z-index: 9998;
+            display: inline-flex;
+            align-items: center;
+            gap: 9px;
+            padding: 12px 20px;
+            background: #101a2e;
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-radius: 999px;
+            box-shadow: 0 8px 26px rgba(16, 26, 46, 0.28);
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.88rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .report-copilot-fab:hover {
+            transform: translateY(-2px);
+            background: #192742;
+            box-shadow: 0 12px 32px rgba(16, 26, 46, 0.38);
+        }
+
+        .report-fab-pulse {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #10b981;
+            box-shadow: 0 0 6px #10b981;
+            animation: reportPulse 2s infinite;
+        }
+
+        @media (max-width: 900px) {
+            .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .charts { grid-template-columns: 1fr; }
+            .insights { grid-template-columns: 1fr; }
+        }
+
+        @media (max-width: 480px) {
+            .kpis { grid-template-columns: 1fr 1fr; }
+            .kpi { padding: 14px; }
+            .kpi .value { font-size: 21px; }
+            .report-copilot-card {
+                right: 12px;
+                bottom: 74px;
+                width: calc(100vw - 24px);
+                height: calc(100vh - 90px);
+            }
+            .report-copilot-fab {
+                right: 16px;
+                bottom: 16px;
+                padding: 10px 16px;
+                font-size: 0.82rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-inner">
+        <div class="header-text">
+            <div class="eyebrow">{{ eyebrow or (dataset_name ~ " · Decision Support · Multi-Agent Analytics") }}</div>
+            <h1>{{ title or (dataset_name ~ " BI Report") }}</h1>
+            <p>{{ description or (executive_summary[:380] ~ "...") if (executive_summary and executive_summary|length > 380) else (executive_summary or "A clean, decision-support executive view of observations, model predictions, distribution metrics, and data features.") }}</p>
+        </div>
+        <div class="header-actions">
+            <button class="btn-header" onclick="window.print()">🖨️ Export / Print</button>
+            <a href="/reports" class="btn-header">📂 Archive</a>
+        </div>
+    </div>
+</header>
+
+<main>
+    <!-- KPIs Ribbon -->
+    <section class="kpis">
+        {% for kpi in kpi_cards %}
+        <div class="kpi">
+            <div class="label">{{ kpi.label }}</div>
+            <div class="value">{{ kpi.value }}</div>
+            <div class="sub">{{ kpi.sub }}</div>
+        </div>
+        {% endfor %}
+    </section>
+
+    <!-- Visual Charts Grid (2 Columns) -->
+    {% if charts and charts|length > 0 %}
+    <h2 class="section-title">Explore the data</h2>
+    <section class="charts">
+        {% for chart in charts %}
+        <div class="panel">
+            <h2>{{ chart_titles[loop.index0] if chart_titles and chart_titles[loop.index0] else (chart.layout.title.text if (chart.layout and chart.layout.title and chart.layout.title.text) else ("Visual Exploration #" ~ loop.index)) }}</h2>
+            <div id="chart-{{ loop.index0 }}" class="plotly-graph-div" style="height: 440px; width: 100%;"></div>
+        </div>
+        {% endfor %}
+    </section>
+    {% endif %}
+
+    <!-- What Stands Out (3 Insights) -->
+    <h2 class="section-title">What stands out</h2>
+    <section class="insights">
+        {% for ins in standout_insights %}
+        <div class="insight">
+            <h3>{{ ins.title }}</h3>
+            <p>{{ ins.description }}</p>
+        </div>
+        {% endfor %}
+    </section>
+    <p class="note"><strong>Interpretation note:</strong> {{ interpretation_note or "District and observation averages shown here are calculated directly from verified dataset rows. Statistical associations indicate co-variance and predictive relationships. Always contextualize machine learning predictions with operational domain expertise." }}</p>
+
+    <!-- Data Explorer Table -->
+    {% if table_columns and table_rows %}
+    <h2 class="section-title">Data explorer</h2>
+    <section class="panel table-panel">
+        <div class="table-tools">
+            <input id="searchBox" type="search" placeholder="Search records by name, ID, or value…">
+            <select id="quickFilter">
+                <option value="all">All records</option>
+                <option value="missing">Records with missing data</option>
+                <option value="complete">Complete records only</option>
+            </select>
+            <button class="btn-export" onclick="exportTableToCSV('data_explorer.csv')" title="Export visible data rows as CSV">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                <span>Export CSV</span>
+            </button>
+        </div>
+        <div class="table-wrap">
+            <table id="districtTable">
+                <thead>
+                    <tr>
+                        {% for col in table_columns %}
+                        <th data-col="{{ loop.index0 }}">{{ col }} ↕</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in table_rows %}
+                    <tr>
+                        {% for col in table_columns %}
+                        <td>{{ row.get(col, "—") }}</td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div id="rowCount" class="note"></div>
+    </section>
+    {% endif %}
+
+    <div class="footer">
+        <span>Report generated by DataMind AI · Multi-Agent Analytics Platform · Verified Publication-Ready</span>
+        <span>Generated: {{ timestamp }}</span>
+    </div>
+</main>
+
+<!-- Plotly Initialization Script -->
+<script>
+    function initPlotlyCharts() {
+        if (typeof Plotly === 'undefined') {
+            setTimeout(initPlotlyCharts, 60);
+            return;
+        }
+
+        const chartData = [
+            {% for chart in charts %}
+            {{ chart|tojson }},
+            {% endfor %}
+        ];
+
+        chartData.forEach((spec, idx) => {
+            const targetId = `chart-${idx}`;
+            const targetDiv = document.getElementById(targetId);
+            if (targetDiv && spec && spec.data) {
+                try {
+                    const layout = spec.layout || {};
+                    layout.autosize = true;
+                    layout.paper_bgcolor = '#ffffff';
+                    layout.plot_bgcolor = '#ffffff';
+                    layout.margin = layout.margin || { l: 40, r: 25, t: 40, b: 40 };
+                    if (layout.title && typeof layout.title === 'object') {
+                        layout.title.text = ''; // Title rendered cleanly in panel h2
+                    } else if (typeof layout.title === 'string') {
+                        layout.title = '';
+                    }
+                    Plotly.newPlot(targetId, spec.data, layout, {
+                        responsive: true,
+                        displayModeBar: true,
+                        modeBarButtonsToRemove: ['lasso2d', 'select2d']
+                    });
+                } catch(err) {
+                    console.error(`Error plotting chart ${targetId}:`, err);
+                }
+            }
+        });
+
+        window.addEventListener('resize', () => {
+            document.querySelectorAll('.plotly-graph-div').forEach(el => {
+                if (typeof Plotly !== 'undefined' && el) {
+                    try { Plotly.Plots.resize(el); } catch(e) {}
+                }
+            });
+        });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initPlotlyCharts);
+    } else {
+        initPlotlyCharts();
+    }
+
+    // Table Search and Column Click Sorting
+    const table = document.getElementById('districtTable');
+    if (table) {
+        const body = table.querySelector('tbody');
+        const originalRows = Array.from(body.rows);
+
+        function filterRows() {
+            const q = document.getElementById('searchBox') ? document.getElementById('searchBox').value.toLowerCase() : '';
+            const filterVal = document.getElementById('quickFilter') ? document.getElementById('quickFilter').value : 'all';
+            let shown = 0;
+
+            originalRows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                let matchesSearch = text.includes(q);
+                let matchesFilter = true;
+
+                if (filterVal === 'missing') {
+                    matchesFilter = text.includes('missing') || text.includes('—');
+                } else if (filterVal === 'complete') {
+                    matchesFilter = !text.includes('missing') && !text.includes('—');
+                }
+
+                const ok = matchesSearch && matchesFilter;
+                row.style.display = ok ? '' : 'none';
+                if (ok) shown++;
+            });
+
+            const countEl = document.getElementById('rowCount');
+            if (countEl) {
+                countEl.textContent = `${shown} of ${originalRows.length} records shown. Click a column header to sort.`;
+            }
+        }
+
+        const sBox = document.getElementById('searchBox');
+        if (sBox) sBox.addEventListener('input', filterRows);
+        const qFilter = document.getElementById('quickFilter');
+        if (qFilter) qFilter.addEventListener('change', filterRows);
+
+        table.querySelectorAll('th').forEach((th, idx) => {
+            th.addEventListener('click', () => {
+                const asc = th.dataset.asc !== 'true';
+                th.dataset.asc = asc ? 'true' : 'false';
+                const sorted = originalRows.slice().sort((a, b) => {
+                    let x = a.cells[idx].textContent.replace(/,/g, '').trim();
+                    let y = b.cells[idx].textContent.replace(/,/g, '').trim();
+                    if (x === 'Missing' || x === '—') return 1;
+                    if (y === 'Missing' || y === '—') return -1;
+                    let nx = Number(x), ny = Number(y);
+                    const cmp = (Number.isNaN(nx) || Number.isNaN(ny)) ? x.localeCompare(y) : nx - ny;
+                    return asc ? cmp : -cmp;
+                });
+                sorted.forEach(r => body.appendChild(r));
+                filterRows();
+            });
+        });
+
+        filterRows();
+    }
+
+    function exportTableToCSV(filename) {
+        const table = document.getElementById('districtTable');
+        if (!table) return;
+        const rows = Array.from(table.querySelectorAll('tr')).filter(r => r.style.display !== 'none');
+        const csv = rows.map(row => {
+            const cells = Array.from(row.querySelectorAll('th, td'));
+            return cells.map(c => '"' + c.textContent.replace(/"/g, '""').replace(/[\r\n]+/g, ' ').trim() + '"').join(',');
+        }).join('\r\n');
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.setAttribute('download', filename || 'data_export.csv');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+</script>
+
+<!-- ═══════════════════════════════════════════════════════════
+     Report AI Copilot Corner Widget
+     ═══════════════════════════════════════════════════════════ -->
+<div class="report-copilot-card" id="report-copilot-card">
+    <div class="report-copilot-header">
+        <div class="report-copilot-title-group">
+            <div class="report-copilot-avatar">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="11" width="18" height="10" rx="2"></rect>
+                    <circle cx="12" cy="5" r="2"></circle>
+                    <path d="M12 7v4"></path>
+                    <line x1="8" y1="16" x2="8" y2="16"></line>
+                    <line x1="16" y1="16" x2="16" y2="16"></line>
+                </svg>
+                <div class="report-status-dot" title="Live Report Copilot"></div>
+            </div>
+            <div class="report-copilot-title-text">
+                <div class="report-copilot-h3">
+                    <span>Report AI Copilot</span>
+                    <span class="report-copilot-badge">Executive</span>
+                </div>
+                <p>Live analysis for {{ dataset_name }}</p>
+            </div>
+        </div>
+        <div class="report-copilot-controls">
+            <button class="report-btn-icon" id="btn-report-clear" onclick="clearReportCopilot()" title="Reset Conversation" aria-label="Reset Conversation">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                    <path d="M3 3v5h5"></path>
+                </svg>
+            </button>
+            <button class="report-btn-icon" id="btn-report-close" onclick="toggleReportCopilot()" title="Close Copilot" aria-label="Close Copilot">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <div class="report-copilot-body" id="report-copilot-body">
+        <div class="report-copilot-messages" id="report-copilot-messages">
+            <div class="report-msg assistant">
+                <div class="report-msg-avatar">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 2a10 10 0 1 0 10 10H12V2z"></path>
+                        <path d="M12 2a10 10 0 0 1 10 10h-10V2z"></path>
+                    </svg>
+                </div>
+                <div class="report-msg-content">
+                    <div class="report-msg-header">
+                        <span class="report-msg-sender">DataMind Report Copilot</span>
+                    </div>
+                    <div class="report-msg-bubble">
+                        <p>👋 Hello! I'm your <strong>Report Copilot</strong> for this <strong>{{ dataset_name }}</strong> report.</p>
+                        <div class="report-mini-kpis">
+                            <span class="mini-kpi">📊 <strong>{{ total_rows }}</strong> records</span>
+                            <span class="mini-kpi">✨ Quality: <strong>{{ quality_score }}%</strong></span>
+                            <span class="mini-kpi">🤖 Model: <strong>{{ best_model }}</strong></span>
+                        </div>
+                        <p style="margin-top: 8px;">Ask me any question about the metrics, predictions, or patterns in this BI dashboard:</p>
+                        <div class="report-chips-row">
+                            <button class="report-chip" onclick="askReportCopilot('Summarize this executive report')">📋 Summarize report</button>
+                            <button class="report-chip" onclick="askReportCopilot('Explain the machine learning model results')">🤖 Explain ML model</button>
+                            <button class="report-chip" onclick="askReportCopilot('What are the key correlations found in the data?')">🎯 Key correlations</button>
+                            <button class="report-chip" onclick="askReportCopilot('What strategic recommendations do you have?')">💡 Recommendations</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="report-copilot-input-area">
+            <div class="report-copilot-input-container">
+                <textarea
+                    id="report-copilot-input"
+                    class="report-copilot-textarea"
+                    placeholder="Ask anything about this report... (e.g. 'What is the top driver?')"
+                    rows="1"
+                ></textarea>
+                <button class="report-send-btn" id="btn-report-send" onclick="sendReportCopilotMessage()" title="Send question" aria-label="Send question">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
+                </button>
+            </div>
+            <div class="report-copilot-hints">
+                <span>Press <kbd style="background: #e2e8f0; padding: 1px 4px; border-radius: 3px; font-size: 11px;">Enter</kbd> to send</span>
+                <span style="color: #10b981; font-weight: 600;">● Report Synced</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Floating Action Button for Report Copilot -->
+<button class="report-copilot-fab" id="report-copilot-fab" onclick="toggleReportCopilot()" title="Ask Report AI Copilot" aria-label="Ask Report AI Copilot">
+    <span class="report-fab-pulse"></span>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="report-fab-icon">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+    </svg>
+    <span id="report-fab-label">Report Copilot</span>
+</button>
+
+<script>
+    const reportId = window.location.pathname.split('/').filter(Boolean).pop() || "report";
+    const reportCard = document.getElementById('report-copilot-card');
+    const reportMessages = document.getElementById('report-copilot-messages');
+    const reportInput = document.getElementById('report-copilot-input');
+    const reportSendBtn = document.getElementById('btn-report-send');
+    let reportHistory = [];
+    let isReportProcessing = false;
+
+    if (reportInput) {
+        reportInput.addEventListener('input', () => {
+            reportInput.style.height = 'auto';
+            reportInput.style.height = Math.min(reportInput.scrollHeight, 120) + 'px';
+        });
+
+        reportInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendReportCopilotMessage();
+            }
+        });
+    }
+
+    function toggleReportCopilot() {
+        if (!reportCard) return;
+        const isOpen = reportCard.classList.toggle('active');
+        const fabLabel = document.getElementById('report-fab-label');
+        if (isOpen) {
+            if (fabLabel) fabLabel.textContent = 'Close';
+            if (reportInput) setTimeout(() => reportInput.focus(), 250);
+        } else {
+            if (fabLabel) fabLabel.textContent = 'Report Copilot';
+        }
+    }
+
+    function askReportCopilot(question) {
+        if (!reportCard.classList.contains('active')) {
+            toggleReportCopilot();
+        }
+        if (reportInput) {
+            reportInput.value = question;
+            sendReportCopilotMessage();
+        }
+    }
+
+    function clearReportCopilot() {
+        reportHistory = [];
+        if (!reportMessages) return;
+        reportMessages.innerHTML = `
+            <div class="report-msg assistant">
+                <div class="report-msg-avatar">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10H12V2z"></path><path d="M12 2a10 10 0 0 1 10 10h-10V2z"></path></svg>
+                </div>
+                <div class="report-msg-content">
+                    <div class="report-msg-header"><span class="report-msg-sender">DataMind Report Copilot</span></div>
+                    <div class="report-msg-bubble">
+                        <p>👋 Conversation reset! Ask me anything regarding this report.</p>
+                        <div class="report-chips-row">
+                            <button class="report-chip" onclick="askReportCopilot('Summarize this executive report')">📋 Summarize report</button>
+                            <button class="report-chip" onclick="askReportCopilot('Explain the machine learning model results')">🤖 Explain ML model</button>
+                            <button class="report-chip" onclick="askReportCopilot('What strategic recommendations do you have?')">💡 Recommendations</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    function formatReportMarkdown(text) {
+        let s = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        s = s.replace(/### (.*?)\n/g, '<h4>$1</h4>');
+        s = s.replace(/## (.*?)\n/g, '<h3>$1</h3>');
+        s = s.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        s = s.replace(/\*(.*?)\*/g, '<em>$1</em>');
+        s = s.replace(/`([^`]+)`/g, '<code style="background: rgba(0,0,0,0.06); padding: 2px 5px; border-radius: 4px; font-family: monospace; font-size: 0.8rem; color: #1e40af;">$1</code>');
+        s = s.replace(/^\s*-\s+(.*?)$/gm, '<li>$1</li>');
+        s = s.replace(/(<li>.*?<\/li>)/s, '<ul>$1</ul>');
+        s = s.replace(/\n\n/g, '<p style="margin-top: 6px;"></p>');
+        return s;
+    }
+
+    function appendReportMessage(role, text) {
+        const div = document.createElement('div');
+        div.className = `report-msg ${role}`;
+        const iconSvg = role === 'user'
+            ? '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>'
+            : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10H12V2z"></path><path d="M12 2a10 10 0 0 1 10 10h-10V2z"></path></svg>';
+        div.innerHTML = `
+            <div class="report-msg-avatar">${iconSvg}</div>
+            <div class="report-msg-content">
+                <div class="report-msg-header"><span class="report-msg-sender">${role === 'user' ? 'You' : 'Report Copilot'}</span></div>
+                <div class="report-msg-bubble">${formatReportMarkdown(text)}</div>
+            </div>
+        `;
+        reportMessages.appendChild(div);
+        reportMessages.scrollTop = reportMessages.scrollHeight;
+    }
+
+    async function sendReportCopilotMessage() {
+        if (isReportProcessing) return;
+        const message = reportInput.value.trim();
+        if (!message) return;
+
+        reportInput.value = '';
+        reportInput.style.height = 'auto';
+        appendReportMessage('user', message);
+        reportHistory.push({ role: 'user', content: message });
+
+        isReportProcessing = true;
+        reportSendBtn.disabled = true;
+
+        const loadingDiv = document.createElement('div');
+        loadingDiv.className = 'report-msg assistant';
+        loadingDiv.id = 'report-loading';
+        loadingDiv.innerHTML = `
+            <div class="report-msg-avatar">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 14 14"></polyline></svg>
+            </div>
+            <div class="report-msg-content">
+                <div class="report-msg-bubble" style="display: flex; gap: 6px; align-items: center; color: var(--muted); font-size: 0.82rem;">
+                    <span class="report-fab-pulse"></span> Analyzing report context...
+                </div>
+            </div>
+        `;
+        reportMessages.appendChild(loadingDiv);
+        reportMessages.scrollTop = reportMessages.scrollHeight;
+
+        try {
+            const resp = await fetch('/api/reports/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    report_id: reportId,
+                    message: message,
+                    history: reportHistory.slice(-6)
+                })
+            });
+
+            const loadEl = document.getElementById('report-loading');
+            if (loadEl) loadEl.remove();
+
+            if (!resp.ok) throw new Error('Server returned ' + resp.status);
+            const data = await resp.json();
+            appendReportMessage('assistant', data.reply);
+            reportHistory.push({ role: 'assistant', content: data.reply });
+        } catch (err) {
+            const loadEl = document.getElementById('report-loading');
+            if (loadEl) loadEl.remove();
+            appendReportMessage('assistant', '⚠️ Unable to query report context: ' + err.message);
+        } finally {
+            isReportProcessing = false;
+            reportSendBtn.disabled = false;
+            if (reportInput) reportInput.focus();
+        }
+    }
+</script>
+
+</body>
+</html>
