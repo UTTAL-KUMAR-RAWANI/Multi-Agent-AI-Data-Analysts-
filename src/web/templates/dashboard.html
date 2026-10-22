@@ -124,49 +124,67 @@
     </div>
 
     <div class="agents-grid">
-        <div class="agent-card">
-            <div class="agent-emoji">🧠</div>
+        <div class="agent-card" data-agent="supervisor">
+            <div class="agent-icon-wrap">
+                <i data-lucide="network"></i>
+            </div>
             <h4>Supervisor</h4>
             <p>Orchestrates tasks</p>
         </div>
-        <div class="agent-card">
-            <div class="agent-emoji">🧹</div>
+        <div class="agent-card" data-agent="cleaner">
+            <div class="agent-icon-wrap">
+                <i data-lucide="sparkles"></i>
+            </div>
             <h4>Data Cleaner</h4>
             <p>Fixes data quality</p>
         </div>
-        <div class="agent-card">
-            <div class="agent-emoji">📊</div>
+        <div class="agent-card" data-agent="eda">
+            <div class="agent-icon-wrap">
+                <i data-lucide="scan-search"></i>
+            </div>
             <h4>EDA Explorer</h4>
             <p>Finds patterns</p>
         </div>
-        <div class="agent-card">
-            <div class="agent-emoji">📈</div>
+        <div class="agent-card" data-agent="statistician">
+            <div class="agent-icon-wrap">
+                <i data-lucide="trending-up"></i>
+            </div>
             <h4>Statistician</h4>
             <p>Hypothesis testing</p>
         </div>
-        <div class="agent-card">
-            <div class="agent-emoji">🤖</div>
+        <div class="agent-card" data-agent="ml">
+            <div class="agent-icon-wrap">
+                <i data-lucide="cpu"></i>
+            </div>
             <h4>ML Engineer</h4>
             <p>Predictive models</p>
         </div>
-        <div class="agent-card">
-            <div class="agent-emoji">🎨</div>
+        <div class="agent-card" data-agent="visualizer">
+            <div class="agent-icon-wrap">
+                <i data-lucide="bar-chart-3"></i>
+            </div>
             <h4>Visualizer</h4>
             <p>Creates charts</p>
         </div>
-        <div class="agent-card">
-            <div class="agent-emoji">📝</div>
+        <div class="agent-card" data-agent="report">
+            <div class="agent-icon-wrap">
+                <i data-lucide="file-text"></i>
+            </div>
             <h4>Report Writer</h4>
             <p>Generates reports</p>
         </div>
-        <div class="agent-card active">
-            <div class="agent-emoji">💬</div>
+        <div class="agent-card active" data-agent="nl_query">
+            <div class="agent-icon-wrap">
+                <i data-lucide="message-square-text"></i>
+            </div>
             <h4>NL Query</h4>
             <p>Ask in English</p>
             <span class="badge badge-success">Active</span>
         </div>
-        <div class="agent-card">
-            <div class="agent-emoji">✅</div>
+        <div class="agent-card" data-agent="qa">
+            <div class="agent-icon-wrap">
+                <i data-lucide="shield-check"></i>
+            </div>
             <h4>QA Agent</h4>
             <p>Validates outputs</p>
         </div>
@@ -211,17 +229,17 @@
                             <span class="copilot-msg-sender">DataMind Copilot</span>
                         </div>
                         <div class="copilot-msg-bubble">
-                            <p>👋 Hello! I'm your <strong>Dashboard Copilot</strong>. I have real-time visibility into all <strong>{{ datasets | length }} loaded datasets</strong>, system health, and the 9 specialized AI agents.</p>
+                            <p>Hello! I'm your <strong>Dashboard Copilot</strong>. I have real-time visibility into all <strong>{{ datasets | length }} loaded datasets</strong>, system health, and the 9 specialized AI agents.</p>
                             <p style="margin-top: 6px;">Ask me anything about your data, missing values, statistical tests, or click one of these quick prompts:</p>
                             <div class="copilot-chips-row" id="copilot-quick-chips">
                                 <button class="copilot-chip" onclick="askCopilot('Summarize all my loaded datasets')">
                                     <i data-lucide="sparkles"></i> Summarize all datasets
                                 </button>
                                 <button class="copilot-chip" onclick="askCopilot('Which datasets have missing values or quality issues?')">
-                                    <i data-lucide="alert-triangle"></i> Check missing data
+                                    <i data-lucide="scan-search"></i> Check missing data
                                 </button>
                                 <button class="copilot-chip" onclick="askCopilot('What do the 9 AI specialist agents do?')">
-                                    <i data-lucide="bot"></i> Explain AI agents
+                                    <i data-lucide="network"></i> Explain AI agents
                                 </button>
                                 <button class="copilot-chip" onclick="askCopilot('How do I run an analysis in Studio?')">
                                     <i data-lucide="zap"></i> How to run Studio analysis
@@ -365,16 +383,16 @@
                         <span class="copilot-msg-sender">DataMind Copilot</span>
                     </div>
                     <div class="copilot-msg-bubble">
-                        <p>👋 Conversation reset! I'm ready for any question about your dashboard, datasets, or AI specialists.</p>
+                        <p>Conversation reset. I'm ready for any question about your dashboard, datasets, or AI specialists.</p>
                         <div class="copilot-chips-row">
                             <button class="copilot-chip" onclick="askCopilot('Summarize all my loaded datasets')">
                                 <i data-lucide="sparkles"></i> Summarize all datasets
                             </button>
                             <button class="copilot-chip" onclick="askCopilot('Which datasets have missing values or quality issues?')">
-                                <i data-lucide="alert-triangle"></i> Check missing data
+                                <i data-lucide="scan-search"></i> Check missing data
                             </button>
                             <button class="copilot-chip" onclick="askCopilot('What do the 9 AI specialist agents do?')">
-                                <i data-lucide="bot"></i> Explain AI agents
+                                <i data-lucide="network"></i> Explain AI agents
                             </button>
                         </div>
                     </div>
@@ -545,7 +563,7 @@
                 const errData = await resp.json().catch(() => ({}));
                 appendCopilotMessage(
                     'assistant',
-                    `⚠️ Error: ${errData.detail || 'Unable to process dashboard question at this moment.'}`
+                    `Error: ${errData.detail || 'Unable to process dashboard question at this moment.'}`
                 );
             } else {
                 const data = await resp.json();
@@ -559,7 +577,7 @@
             }
         } catch (error) {
             removeCopilotLoadingIndicator();
-            appendCopilotMessage('assistant', `⚠️ Connection error: ${error.message}. Please verify the server is running.`);
+            appendCopilotMessage('assistant', `Connection error: ${error.message}. Please verify the server is running.`);
         } finally {
             isCopilotProcessing = false;
             copilotSendBtn.disabled = false;
