@@ -1,0 +1,1 @@
+# DataMind AI - Core Infrastructure
