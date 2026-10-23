@@ -28,7 +28,8 @@
                 <i data-lucide="rows-3"></i>
             </div>
             <div class="stat-info">
-                <span class="stat-value">{{ '{:,}'.format(datasets | sum(attribute='num_rows')) if datasets else '0' }}</span>
+                <span class="stat-value">{{ '{:,}'.format(datasets | sum(attribute='num_rows')) if datasets else '0'
+                    }}</span>
                 <span class="stat-label">Total Rows</span>
             </div>
         </div>
@@ -69,7 +70,8 @@
                     <i data-lucide="file-spreadsheet"></i>
                 </div>
                 <div class="dataset-actions">
-                    <button class="btn-icon" onclick="deleteDataset('{{ ds.dataset_id }}')" title="Delete dataset" aria-label="Delete dataset">
+                    <button class="btn-icon" onclick="deleteDataset('{{ ds.dataset_id }}')" title="Delete dataset"
+                        aria-label="Delete dataset">
                         <i data-lucide="trash-2"></i>
                     </button>
                 </div>
@@ -77,9 +79,12 @@
             <div class="dataset-card-body">
                 <h3 class="dataset-name">{{ ds.file_name }}</h3>
                 <div class="dataset-meta">
-                    <span><i data-lucide="rows-3"></i> <strong>{{ '{:,}'.format(ds.num_rows) }}</strong> <small>rows</small></span>
-                    <span><i data-lucide="columns-3"></i> <strong>{{ ds.num_columns }}</strong> <small>cols</small></span>
-                    <span><i data-lucide="hard-drive"></i> <strong>{{ ds.memory_usage_mb }}</strong> <small>MB</small></span>
+                    <span><i data-lucide="rows-3"></i> <strong>{{ '{:,}'.format(ds.num_rows) }}</strong>
+                        <small>rows</small></span>
+                    <span><i data-lucide="columns-3"></i> <strong>{{ ds.num_columns }}</strong>
+                        <small>cols</small></span>
+                    <span><i data-lucide="hard-drive"></i> <strong>{{ ds.memory_usage_mb }}</strong>
+                        <small>MB</small></span>
                 </div>
                 {% if ds.has_missing %}
                 <div class="dataset-warning">
@@ -89,7 +94,8 @@
                 {% endif %}
             </div>
             <div class="dataset-card-footer" style="display: flex; gap: 0.5rem;">
-                <a href="/analysis/{{ ds.dataset_id }}" class="btn btn-primary btn-sm" id="btn-analyze-{{ ds.dataset_id }}">
+                <a href="/analysis/{{ ds.dataset_id }}" class="btn btn-primary btn-sm"
+                    id="btn-analyze-{{ ds.dataset_id }}">
                     <i data-lucide="zap"></i>
                     <span>Analyze Studio</span>
                 </a>
@@ -191,92 +197,100 @@
     </div>
 </div>
 
-    <!-- Dashboard AI Copilot Floating Corner Widget -->
-    <div class="dashboard-copilot-card" id="dashboard-copilot-card">
-        <div class="copilot-header">
-            <div class="copilot-title-group">
-                <div class="copilot-avatar">
-                    <i data-lucide="bot"></i>
-                    <div class="copilot-status-dot" title="Copilot connected to live workspace"></div>
-                </div>
-                <div class="copilot-title-text">
-                    <h3>
-                        <span>Dashboard AI Copilot</span>
-                        <span class="badge-copilot">Live</span>
-                    </h3>
-                    <p>Live workspace analytics & AI agent assistant</p>
-                </div>
+<!-- Dashboard AI Copilot Floating Corner Widget -->
+<div class="dashboard-copilot-card" id="dashboard-copilot-card">
+    <div class="copilot-header">
+        <div class="copilot-title-group">
+            <div class="copilot-avatar">
+                <i data-lucide="bot"></i>
+                <div class="copilot-status-dot" title="Copilot connected to live workspace"></div>
             </div>
-            <div class="copilot-controls">
-                <button class="copilot-btn-icon" id="btn-copilot-clear" onclick="clearCopilot()" title="Reset Conversation" aria-label="Reset Conversation">
-                    <i data-lucide="rotate-ccw"></i>
-                </button>
-                <button class="copilot-btn-icon" id="btn-copilot-close" onclick="closeCopilot()" title="Close Copilot" aria-label="Close Copilot">
-                    <i data-lucide="x"></i>
-                </button>
+            <div class="copilot-title-text">
+                <h3>
+                    <span>Dashboard AI Copilot</span>
+                    <span class="badge-copilot">Live</span>
+                </h3>
+                <p>Live workspace analytics & AI agent assistant</p>
             </div>
         </div>
-
-        <div class="copilot-body" id="copilot-body">
-            <div class="copilot-messages" id="copilot-messages">
-                <!-- Welcome Message -->
-                <div class="copilot-msg assistant">
-                    <div class="copilot-msg-avatar">
-                        <i data-lucide="brain-circuit"></i>
-                    </div>
-                    <div class="copilot-msg-content">
-                        <div class="copilot-msg-header">
-                            <span class="copilot-msg-sender">DataWhale Copilot</span>
-                        </div>
-                        <div class="copilot-msg-bubble">
-                            <p>Hello! I'm your <strong>Dashboard Copilot</strong>. I have real-time visibility into all <strong>{{ datasets | length }} loaded datasets</strong>, system health, and the 9 specialized AI agents.</p>
-                            <p style="margin-top: 6px;">Ask me anything about your data, missing values, statistical tests, or click one of these quick prompts:</p>
-                            <div class="copilot-chips-row" id="copilot-quick-chips">
-                                <button class="copilot-chip" onclick="askCopilot('Summarize all my loaded datasets')">
-                                    <i data-lucide="sparkles"></i> Summarize all datasets
-                                </button>
-                                <button class="copilot-chip" onclick="askCopilot('Which datasets have missing values or quality issues?')">
-                                    <i data-lucide="scan-search"></i> Check missing data
-                                </button>
-                                <button class="copilot-chip" onclick="askCopilot('What do the 9 AI specialist agents do?')">
-                                    <i data-lucide="network"></i> Explain AI agents
-                                </button>
-                                <button class="copilot-chip" onclick="askCopilot('How do I run an analysis in Studio?')">
-                                    <i data-lucide="zap"></i> How to run Studio analysis
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Input Area -->
-            <div class="copilot-input-area">
-                <div class="copilot-input-container">
-                    <textarea
-                        id="copilot-input"
-                        class="copilot-textarea"
-                        placeholder="Ask anything about your dashboard, datasets, or agents... (e.g. 'Which dataset has the most rows?')"
-                        rows="1"
-                    ></textarea>
-                    <button class="copilot-send-btn" id="btn-copilot-send" onclick="sendCopilotMessage()" title="Send question" aria-label="Send question">
-                        <i data-lucide="send-horizontal"></i>
-                    </button>
-                </div>
-                <div class="copilot-footer-hints">
-                    <span>Press <kbd style="background: rgba(255,255,255,0.08); padding: 1px 5px; border-radius: 4px;">Enter</kbd> to send</span>
-                    <span class="copilot-badge-live">● Live Connected</span>
-                </div>
-            </div>
+        <div class="copilot-controls">
+            <button class="copilot-btn-icon" id="btn-copilot-clear" onclick="clearCopilot()" title="Reset Conversation"
+                aria-label="Reset Conversation">
+                <i data-lucide="rotate-ccw"></i>
+            </button>
+            <button class="copilot-btn-icon" id="btn-copilot-close" onclick="closeCopilot()" title="Close Copilot"
+                aria-label="Close Copilot">
+                <i data-lucide="x"></i>
+            </button>
         </div>
     </div>
 
-    <!-- Floating Action Launcher at Corner -->
-    <button class="copilot-fab" id="copilot-fab" onclick="toggleCopilot()" title="Ask Dashboard Copilot" aria-label="Ask Dashboard Copilot">
-        <span class="copilot-fab-pulse"></span>
-        <i data-lucide="message-square-code" id="copilot-fab-icon"></i>
-        <span id="copilot-fab-label">Ask Copilot</span>
-    </button>
+    <div class="copilot-body" id="copilot-body">
+        <div class="copilot-messages" id="copilot-messages">
+            <!-- Welcome Message -->
+            <div class="copilot-msg assistant">
+                <div class="copilot-msg-avatar">
+                    <i data-lucide="brain-circuit"></i>
+                </div>
+                <div class="copilot-msg-content">
+                    <div class="copilot-msg-header">
+                        <span class="copilot-msg-sender">DataWhale Copilot</span>
+                    </div>
+                    <div class="copilot-msg-bubble">
+                        <p>Hello! I'm your <strong>Dashboard Copilot</strong>. I have real-time visibility into all
+                            <strong>{{ datasets | length }} loaded datasets</strong>, system health, and the 9
+                            specialized AI agents.
+                        </p>
+                        <p style="margin-top: 6px;">Ask me anything about your data, missing values, statistical tests,
+                            or click one of these quick prompts:</p>
+                        <div class="copilot-chips-row" id="copilot-quick-chips">
+                            <button class="copilot-chip" onclick="askCopilot('Summarize all my loaded datasets')">
+                                <i data-lucide="sparkles"></i> Summarize all datasets
+                            </button>
+                            <button class="copilot-chip"
+                                onclick="askCopilot('Which datasets have missing values or quality issues?')">
+                                <i data-lucide="scan-search"></i> Check missing data
+                            </button>
+                            <button class="copilot-chip" onclick="askCopilot('What do the 9 AI specialist agents do?')">
+                                <i data-lucide="network"></i> Explain AI agents
+                            </button>
+                            <button class="copilot-chip" onclick="askCopilot('How do I run an analysis in Studio?')">
+                                <i data-lucide="zap"></i> How to run Studio analysis
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Input Area -->
+        <div class="copilot-input-area">
+            <div class="copilot-input-container">
+                <textarea id="copilot-input" class="copilot-textarea"
+                    placeholder="Ask anything about your dashboard, datasets, or agents... (e.g. 'Which dataset has the most rows?')"
+                    rows="1"></textarea>
+                <button class="copilot-send-btn" id="btn-copilot-send" onclick="sendCopilotMessage()"
+                    title="Send question" aria-label="Send question">
+                    <i data-lucide="send-horizontal"></i>
+                </button>
+            </div>
+            <div class="copilot-footer-hints">
+                <span>Press <kbd
+                        style="background: rgba(255,255,255,0.08); padding: 1px 5px; border-radius: 4px;">Enter</kbd> to
+                    send</span>
+                <span class="copilot-badge-live">● Live Connected</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Floating Action Launcher at Corner -->
+<button class="copilot-fab" id="copilot-fab" onclick="toggleCopilot()" title="Ask Dashboard Copilot"
+    aria-label="Ask Dashboard Copilot">
+    <span class="copilot-fab-pulse"></span>
+    <i data-lucide="message-square-code" id="copilot-fab-icon"></i>
+    <span id="copilot-fab-label">Ask Copilot</span>
+</button>
 {% endblock %}
 
 {% block scripts %}
@@ -602,4 +616,3 @@
     }
 </script>
 {% endblock %}
-
