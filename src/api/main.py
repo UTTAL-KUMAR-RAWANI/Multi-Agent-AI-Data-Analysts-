@@ -97,44 +97,23 @@ async def upload_page(request: Request):
     )
 
 
-@app.get("/chat/{dataset_id}", response_class=HTMLResponse)
+@app.get("/chat/{dataset_id}")
 async def chat_page(request: Request, dataset_id: str):
-    """Chat interface for querying a dataset."""
-    from src.tools.data_loader import get_dataset_metadata
-    from src.core.exceptions import DatasetNotFoundError
-
-    try:
-        metadata = get_dataset_metadata(dataset_id)
-    except DatasetNotFoundError:
-        return templates.TemplateResponse(
-            request=request,
-            name="error.html",
-            context={
-                "error": f"Dataset '{dataset_id}' not found.",
-                "active_page": "chat",
-            },
-            status_code=404,
-        )
-
-    return templates.TemplateResponse(
-        request=request,
-        name="chat.html",
-        context={
-            "dataset_id": dataset_id,
-            "metadata": metadata,
-            "active_page": "chat",
-        },
-    )
+    """Dataset chat is now unified directly inside Multi-Agent Studio."""
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url=f"/analysis/{dataset_id}?tab=chat", status_code=302)
 
 
 @app.get("/analysis/{dataset_id}", response_class=HTMLResponse)
 async def analysis_page(request: Request, dataset_id: str):
     """Multi-Agent Studio page for in-depth analysis and automated modeling."""
-    from src.tools.data_loader import get_dataset_metadata
+    from src.tools.data_loader import get_dataset_metadata, get_dataset_stage, get_cleaning_audit
     from src.core.exceptions import DatasetNotFoundError
 
     try:
         metadata = get_dataset_metadata(dataset_id)
+        stage = get_dataset_stage(dataset_id)
+        cleaning_audit = get_cleaning_audit(dataset_id)
     except DatasetNotFoundError:
         return templates.TemplateResponse(
             request=request,
@@ -152,6 +131,8 @@ async def analysis_page(request: Request, dataset_id: str):
         context={
             "dataset_id": dataset_id,
             "metadata": metadata,
+            "stage": stage,
+            "cleaning_audit": cleaning_audit,
             "active_page": "analysis",
         },
     )

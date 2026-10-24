@@ -24,36 +24,59 @@ def execute_sql(
     dataset_id: str,
     sql_query: str,
     max_rows: int = 1000,
+    target_stage: str = "active",
 ) -> dict[str, Any]:
     """
     Execute a SQL query against a loaded dataset using DuckDB.
 
-    The dataset is registered as a table with its dataset_id as the name.
-    Column names with spaces or special characters are automatically quoted.
+    The dataset is registered as a table with its dataset_id as the name,
+    as well as aliases 'data', and lifecycle aliases 'raw', 'cleaned', and 'analysis'.
 
     Args:
         dataset_id: The dataset to query.
-        sql_query: SQL query string. Use the dataset_id as the table name.
-        max_rows: Maximum rows to return (prevents massive results).
+        sql_query: SQL query string.
+        max_rows: Maximum rows to return.
+        target_stage: 'active', 'raw', 'cleaned', or 'analysis'.
 
     Returns:
         Dict with keys: columns, rows, row_count, truncated, query.
-
-    Raises:
-        QueryExecutionError: If the SQL query fails.
-        DatasetNotFoundError: If the dataset doesn't exist.
     """
-    df = get_dataset(dataset_id)
+    from src.tools.data_loader import (
+        get_dataset,
+        get_raw_dataset,
+        get_cleaned_dataset,
+        get_analysis_dataset,
+    )
 
-    logger.info(f"Executing SQL on dataset '{dataset_id}': {sql_query[:200]}")
+    df = get_dataset(dataset_id, stage=target_stage)
+
+    logger.info(f"Executing SQL on dataset '{dataset_id}' (stage={target_stage}): {sql_query[:200]}")
 
     try:
         # Create a DuckDB connection and register the DataFrame
         conn = duckdb.connect()
         conn.register(dataset_id, df)
 
-        # Also register with a clean alias "data" for convenience
+        # Primary alias "data" points to the requested target stage DataFrame
         conn.register("data", df)
+
+        # Also register specific stage aliases if available
+        try:
+            raw_df = get_raw_dataset(dataset_id)
+            conn.register("raw_data", raw_df)
+            conn.register("raw", raw_df)
+        except Exception:
+            pass
+
+        cleaned_df = get_cleaned_dataset(dataset_id)
+        if cleaned_df is not None:
+            conn.register("cleaned_data", cleaned_df)
+            conn.register("cleaned", cleaned_df)
+
+        analysis_df = get_analysis_dataset(dataset_id)
+        if analysis_df is not None:
+            conn.register("analysis_data", analysis_df)
+            conn.register("analysis", analysis_df)
 
         # Execute the query
         result = conn.execute(sql_query)
@@ -91,14 +114,17 @@ def execute_sql(
         raise QueryExecutionError(sql_query, str(e))
 
 
-def get_table_schema(dataset_id: str) -> str:
+def get_table_schema(dataset_id: str, target_stage: str = "active") -> str:
     """
     Get a SQL-friendly schema description for the LLM.
 
     Returns a CREATE TABLE-like statement that tells the LLM
-    what columns exist and their types.
+    what columns exist and their types for the specified lifecycle stage.
     """
-    meta = get_dataset_metadata(dataset_id)
+    from src.tools.data_loader import get_dataset_metadata, get_dataset_stage
+
+    current_stage = get_dataset_stage(dataset_id)
+    meta = get_dataset_metadata(dataset_id, stage=target_stage)
 
     # Map pandas dtypes to SQL types for LLM understanding
     dtype_map = {
@@ -119,7 +145,9 @@ def get_table_schema(dataset_id: str) -> str:
         # Quote column names to handle spaces and special characters
         columns_sql.append(f'    "{col["name"]}" {sql_type}')
 
+    stage_label = "Raw Upload (Uncleaned)" if target_stage == "raw" or current_stage == "raw" else f"Cleaned & Validated ({current_stage})"
     schema = f'-- Table: "{dataset_id}" (also aliased as "data")\n'
+    schema += f'-- Stage: {stage_label}\n'
     schema += f'-- {meta["num_rows"]} rows, {meta["num_columns"]} columns\n'
     schema += f'CREATE TABLE "{dataset_id}" (\n'
     schema += ",\n".join(columns_sql)
@@ -128,14 +156,15 @@ def get_table_schema(dataset_id: str) -> str:
     return schema
 
 
-def get_sample_values(dataset_id: str, max_unique: int = 10) -> str:
+def get_sample_values(dataset_id: str, max_unique: int = 10, target_stage: str = "active") -> str:
     """
     Get sample unique values for each column.
 
     Helps the LLM understand what kind of data is in each column,
     so it can write better SQL (e.g., knowing exact category names).
     """
-    df = get_dataset(dataset_id)
+    from src.tools.data_loader import get_dataset
+    df = get_dataset(dataset_id, stage=target_stage)
     lines = []
 
     for col in df.columns:

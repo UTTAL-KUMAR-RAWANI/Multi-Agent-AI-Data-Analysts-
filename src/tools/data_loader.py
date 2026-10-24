@@ -20,9 +20,15 @@ from src.core.state import DatasetMetadata
 
 logger = logging.getLogger(__name__)
 
-# In-memory dataset registry: dataset_id -> DataFrame
-_datasets: dict[str, pd.DataFrame] = {}
-_metadata: dict[str, DatasetMetadata] = {}
+# In-memory dataset registries: dataset_id -> DataFrame across lifecycle stages
+_datasets: dict[str, pd.DataFrame] = {}            # Current active working DataFrame
+_datasets_raw: dict[str, pd.DataFrame] = {}        # Immutable original uploaded DataFrame
+_datasets_cleaned: dict[str, pd.DataFrame] = {}    # Cleaned DataFrame after explicit data cleaning
+_datasets_analysis: dict[str, pd.DataFrame] = {}   # Validated analysis DataFrame
+_metadata: dict[str, DatasetMetadata] = {}         # Active working metadata
+_raw_metadata: dict[str, DatasetMetadata] = {}     # Pristine raw metadata
+_cleaning_audit_logs: dict[str, dict[str, Any]] = {}  # Recorded cleaning audit trails
+_processing_stages: dict[str, str] = {}            # "raw" | "cleaned" | "validated"
 
 
 def _generate_dataset_id(file_path: str) -> str:
@@ -82,6 +88,8 @@ def load_dataset(
     # Generate ID and store
     dataset_id = _generate_dataset_id(file_path)
     _datasets[dataset_id] = df
+    _datasets_raw[dataset_id] = df.copy()
+    _processing_stages[dataset_id] = "raw"
 
     # Extract metadata
     missing_summary = df.isnull().sum()
@@ -107,10 +115,11 @@ def load_dataset(
         "missing_summary": missing_dict,
     }
     _metadata[dataset_id] = metadata
+    _raw_metadata[dataset_id] = dict(metadata)
 
     logger.info(
         f"Dataset loaded: id={dataset_id}, shape=({metadata['num_rows']}, {metadata['num_columns']}), "
-        f"memory={metadata['memory_usage_mb']}MB"
+        f"memory={metadata['memory_usage_mb']}MB, stage=raw"
     )
 
     return dataset_id, metadata
@@ -147,14 +156,27 @@ def _find_dataset_on_disk(dataset_id: str) -> Path | None:
     return None
 
 
-def get_dataset(dataset_id: str) -> pd.DataFrame:
+def get_dataset(dataset_id: str, stage: str = "active") -> pd.DataFrame:
     """
-    Get a loaded DataFrame by its ID. Auto-resolves from memory or disk if needed.
+    Get a loaded DataFrame by its ID and optional lifecycle stage.
+
+    Stages:
+        - 'active': current working DataFrame
+        - 'raw': pristine, immutable original uploaded DataFrame
+        - 'cleaned': cleaned DataFrame if available, else active/raw
+        - 'analysis': validated analysis DataFrame if available, else cleaned/active
 
     Raises:
         DatasetNotFoundError: If the dataset ID doesn't exist.
     """
+    # 1. Direct memory lookup
     if dataset_id in _datasets:
+        if stage == "raw" and dataset_id in _datasets_raw:
+            return _datasets_raw[dataset_id]
+        elif stage == "cleaned" and dataset_id in _datasets_cleaned:
+            return _datasets_cleaned[dataset_id]
+        elif stage == "analysis" and dataset_id in _datasets_analysis:
+            return _datasets_analysis[dataset_id]
         return _datasets[dataset_id]
 
     # Check prefix or partial match in currently loaded datasets
@@ -164,9 +186,19 @@ def get_dataset(dataset_id: str) -> pd.DataFrame:
         k_low = k.lower()
         if k_low == clean_id or k_low.startswith(prefix) or clean_id.startswith(k_low.rsplit("_", 1)[0]):
             _datasets[dataset_id] = df
+            if k in _datasets_raw:
+                _datasets_raw[dataset_id] = _datasets_raw[k]
+            if k in _datasets_cleaned:
+                _datasets_cleaned[dataset_id] = _datasets_cleaned[k]
+            if k in _datasets_analysis:
+                _datasets_analysis[dataset_id] = _datasets_analysis[k]
+            if k in _processing_stages:
+                _processing_stages[dataset_id] = _processing_stages[k]
             if k in _metadata:
                 _metadata[dataset_id] = _metadata[k]
-            return df
+            if k in _raw_metadata:
+                _raw_metadata[dataset_id] = _raw_metadata[k]
+            return get_dataset(dataset_id, stage=stage)
 
     # Auto-load from uploads on disk
     matched_file = _find_dataset_on_disk(dataset_id)
@@ -174,21 +206,100 @@ def get_dataset(dataset_id: str) -> pd.DataFrame:
         try:
             gen_id, meta = load_dataset(str(matched_file))
             _datasets[dataset_id] = _datasets[gen_id]
+            _datasets_raw[dataset_id] = _datasets_raw[gen_id]
+            _processing_stages[dataset_id] = _processing_stages.get(gen_id, "raw")
             _metadata[dataset_id] = meta
-            return _datasets[dataset_id]
+            _raw_metadata[dataset_id] = dict(meta)
+            return get_dataset(dataset_id, stage=stage)
         except Exception as e:
             logger.warning(f"Found file {matched_file} for {dataset_id} but loading failed: {e}")
 
     raise DatasetNotFoundError(dataset_id)
 
 
-def get_dataset_metadata(dataset_id: str) -> DatasetMetadata:
+def get_raw_dataset(dataset_id: str) -> pd.DataFrame:
+    """Get the immutable original uploaded DataFrame."""
+    return get_dataset(dataset_id, stage="raw")
+
+
+def get_cleaned_dataset(dataset_id: str) -> pd.DataFrame | None:
+    """Get the explicitly cleaned DataFrame if cleaning has been executed, else None."""
+    if dataset_id in _datasets_cleaned:
+        return _datasets_cleaned[dataset_id]
+    # Check partial match
+    clean_id = dataset_id.lower().strip()
+    prefix = clean_id.rsplit("_", 1)[0] if "_" in clean_id else clean_id
+    for k, df in _datasets_cleaned.items():
+        if k.lower() == clean_id or k.lower().startswith(prefix):
+            return df
+    return None
+
+
+def get_analysis_dataset(dataset_id: str) -> pd.DataFrame | None:
+    """Get the validated analysis DataFrame if available, else None."""
+    if dataset_id in _datasets_analysis:
+        return _datasets_analysis[dataset_id]
+    clean_id = dataset_id.lower().strip()
+    prefix = clean_id.rsplit("_", 1)[0] if "_" in clean_id else clean_id
+    for k, df in _datasets_analysis.items():
+        if k.lower() == clean_id or k.lower().startswith(prefix):
+            return df
+    return None
+
+
+def get_dataset_stage(dataset_id: str) -> str:
+    """Get current lifecycle stage: 'raw', 'cleaned', or 'validated'."""
+    if dataset_id in _processing_stages:
+        return _processing_stages[dataset_id]
+    clean_id = dataset_id.lower().strip()
+    prefix = clean_id.rsplit("_", 1)[0] if "_" in clean_id else clean_id
+    for k, stg in _processing_stages.items():
+        if k.lower() == clean_id or k.lower().startswith(prefix):
+            return stg
+    return "raw"
+
+
+def get_cleaning_audit(dataset_id: str) -> dict[str, Any] | None:
+    """Get recorded cleaning audit report if cleaning was performed."""
+    if dataset_id in _cleaning_audit_logs:
+        return _cleaning_audit_logs[dataset_id]
+    clean_id = dataset_id.lower().strip()
+    prefix = clean_id.rsplit("_", 1)[0] if "_" in clean_id else clean_id
+    for k, log in _cleaning_audit_logs.items():
+        if k.lower() == clean_id or k.lower().startswith(prefix):
+            return log
+    return None
+
+
+def set_dataset_stage(
+    dataset_id: str,
+    stage: str,
+    df: pd.DataFrame | None = None,
+    audit_log: dict[str, Any] | None = None,
+) -> None:
+    """Set dataset stage and optionally register the stage DataFrame and audit log."""
+    _processing_stages[dataset_id] = stage
+    if df is not None:
+        if stage == "cleaned":
+            _datasets_cleaned[dataset_id] = df.copy()
+            _datasets[dataset_id] = df
+        elif stage == "validated":
+            _datasets_analysis[dataset_id] = df.copy()
+            _datasets[dataset_id] = df
+    if audit_log is not None:
+        _cleaning_audit_logs[dataset_id] = audit_log
+
+
+def get_dataset_metadata(dataset_id: str, stage: str = "active") -> DatasetMetadata:
     """
     Get metadata for a loaded dataset. Auto-resolves from memory or disk if needed.
 
     Raises:
         DatasetNotFoundError: If the dataset ID doesn't exist.
     """
+    if stage == "raw" and dataset_id in _raw_metadata:
+        return _raw_metadata[dataset_id]
+
     if dataset_id in _metadata:
         return _metadata[dataset_id]
 
@@ -203,19 +314,34 @@ def get_dataset_metadata(dataset_id: str) -> DatasetMetadata:
     raise DatasetNotFoundError(dataset_id)
 
 
-def update_dataset(dataset_id: str, df: pd.DataFrame) -> DatasetMetadata:
+def update_dataset(
+    dataset_id: str,
+    df: pd.DataFrame,
+    stage: str = "cleaned",
+    audit_log: dict[str, Any] | None = None,
+) -> DatasetMetadata:
     """
     Update a dataset in the workspace (e.g., after cleaning).
+    Preserves raw data untouched and records the new stage and audit log.
 
     Returns updated metadata.
     """
     if dataset_id not in _datasets:
-        raise DatasetNotFoundError(dataset_id)
+        # Try resolving
+        get_dataset(dataset_id)
 
     _datasets[dataset_id] = df
+    if stage == "cleaned":
+        _datasets_cleaned[dataset_id] = df.copy()
+    elif stage == "validated":
+        _datasets_analysis[dataset_id] = df.copy()
+    _processing_stages[dataset_id] = stage
+
+    if audit_log:
+        _cleaning_audit_logs[dataset_id] = audit_log
 
     # Refresh metadata
-    old_meta = _metadata[dataset_id]
+    old_meta = _metadata.get(dataset_id, {})
     missing_summary = df.isnull().sum()
     missing_dict = {
         col: int(count)
@@ -246,9 +372,15 @@ def list_datasets() -> list[DatasetMetadata]:
 
 
 def delete_dataset(dataset_id: str) -> None:
-    """Remove a dataset from the workspace."""
+    """Remove a dataset and its lifecycle stages from the workspace."""
     _datasets.pop(dataset_id, None)
+    _datasets_raw.pop(dataset_id, None)
+    _datasets_cleaned.pop(dataset_id, None)
+    _datasets_analysis.pop(dataset_id, None)
     _metadata.pop(dataset_id, None)
+    _raw_metadata.pop(dataset_id, None)
+    _cleaning_audit_logs.pop(dataset_id, None)
+    _processing_stages.pop(dataset_id, None)
 
 
 def describe_dataset(dataset_id: str) -> str:

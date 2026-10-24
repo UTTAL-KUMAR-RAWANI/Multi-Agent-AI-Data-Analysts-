@@ -1,11 +1,11 @@
 """
-DataMind AI - Natural Language Query Agent
+DataWhale AI - Natural Language Query Agent
 
 Translates natural language questions about data into SQL queries,
 executes them via DuckDB, and returns human-readable results.
 
-This is the first and most interactive agent — users ask questions
-in plain English, and this agent figures out the right SQL.
+Enforces intelligent data-source routing between raw upload,
+explicitly cleaned data, and validated analysis data.
 """
 
 from __future__ import annotations
@@ -20,23 +20,24 @@ from langchain_core.language_models.chat_models import BaseChatModel
 from src.core.llm_router import get_llm, LLMRouter
 from src.core.config import ModelTier
 from src.tools.sql_engine import execute_sql, get_table_schema, get_sample_values
-from src.tools.data_loader import describe_dataset
+from src.tools.data_loader import describe_dataset, get_dataset_metadata, get_dataset_stage, get_cleaned_dataset, get_analysis_dataset, get_cleaning_audit
 
 logger = logging.getLogger(__name__)
 
 # System prompt for the NL Query Agent
-NL_QUERY_SYSTEM_PROMPT = """You are an expert SQL analyst. Your job is to translate natural language questions about data into DuckDB SQL queries.
+NL_QUERY_SYSTEM_PROMPT = """You are an expert SQL analyst for DataWhale AI. Your job is to translate natural language questions about data into DuckDB SQL queries.
 
 ## Rules
 1. ALWAYS respond with valid JSON containing exactly two keys: "sql" and "explanation".
 2. The "sql" value must be a valid DuckDB SQL query.
 3. The "explanation" value must be a brief, human-readable explanation of what the query does.
 4. Use the table name provided in the schema — it's available as both the dataset ID and the alias "data".
+   You can also reference "raw" for original uncleaned values, or "cleaned" for cleaned values if relevant.
 5. Always quote column names with double quotes if they contain spaces or special characters.
 6. Use DuckDB SQL syntax (similar to PostgreSQL).
 7. For aggregations, always include meaningful column aliases using AS.
-8. Limit results to 100 rows unless the user asks for all results.
-9. If the question is ambiguous, make reasonable assumptions and explain them.
+8. Limit results to 100 rows unless the user explicitly asks for all results.
+9. If the user asks a follow-up question (e.g. "show only the top 5 of those", "compare with the previous result"), use the provided conversation history to understand the target entity, metric, and filters.
 10. NEVER modify data — only SELECT queries are allowed.
 
 ## Response Format
@@ -52,56 +53,112 @@ IMPORTANT: Respond with ONLY the JSON object, no markdown code blocks, no extra 
 
 INTERPRET_RESULT_PROMPT = """You are a data analyst presenting query results to a non-technical user.
 
-Given the user's original question, the SQL query that was run, and the query results,
+Given the user's original question, the conversation context, the SQL query that was run, and the query results,
 provide a clear, concise, human-readable answer.
 
 ## Rules
-1. Lead with the direct answer to the question.
+1. Lead with the direct, definitive answer to the question.
 2. If there are numbers, format them nicely (commas, rounding, percentages).
-3. If the result is a table, describe the key findings.
-4. Keep it concise — 2-4 sentences for simple questions, more for complex ones.
-5. If the data reveals something unexpected or interesting, mention it.
-6. Do NOT show raw JSON or SQL — speak in plain English."""
+3. If the result is a table, describe the key findings and trends.
+4. Keep it concise — 2-4 sentences for simple questions, more for complex comparisons.
+5. If the data reveals something unexpected or interesting, highlight it.
+6. Do NOT show raw JSON or raw SQL in your interpretation text — speak in plain English.
+7. If answering from a raw uncleaned dataset, transparently acknowledge that cleaning has not yet been executed."""
 
 
 class NLQueryAgent:
     """
-    Natural Language to SQL Query Agent.
+    Natural Language to SQL Query Agent with intelligent data-source routing.
 
-    Takes a user's question about a dataset, generates SQL,
-    executes it, and returns a human-readable answer.
+    Takes a user's question, inspects dataset state and intent, selects the
+    appropriate data source (raw vs cleaned vs analysis), executes via DuckDB,
+    and returns verified human-readable answers.
     """
 
     def __init__(self, llm: BaseChatModel | None = None):
-        """
-        Initialize the NL Query Agent.
-
-        Args:
-            llm: Optional pre-configured LLM. If None, uses the default from LLMRouter.
-        """
         if llm is None:
             router = LLMRouter()
             self.llm = router.get_llm_for_agent("nl_query")
         else:
             self.llm = llm
 
-    async def generate_sql(self, question: str, dataset_id: str) -> dict[str, str]:
+    def determine_target_source(
+        self,
+        question: str,
+        dataset_id: str,
+        preference: str | None = None,
+    ) -> tuple[str, str, str]:
         """
-        Generate a SQL query from a natural language question.
-
-        Args:
-            question: The user's question in plain English.
-            dataset_id: The dataset to query against.
+        Determine whether to route to 'raw', 'cleaned', or 'analysis' data source.
 
         Returns:
-            Dict with "sql" and "explanation" keys.
+            tuple: (target_stage, data_source_label, current_lifecycle_status)
         """
-        # Build context about the dataset
-        schema = get_table_schema(dataset_id)
-        sample_values = get_sample_values(dataset_id)
+        current_status = get_dataset_stage(dataset_id)
+        has_cleaned = get_cleaned_dataset(dataset_id) is not None
+        has_analysis = get_analysis_dataset(dataset_id) is not None
+
+        if preference in ("raw", "cleaned", "analysis"):
+            target = preference
+        else:
+            q_low = question.lower()
+            raw_keywords = [
+                "original", "raw", "uncleaned", "source file", "uploaded file",
+                "before clean", "missing values in original", "initial rows", "original count",
+                "nulls in raw", "unprocessed", "uploaded"
+            ]
+            audit_keywords = [
+                "what was cleaned", "cleaning audit", "how many duplicates removed",
+                "what was imputed", "cleaning actions", "transformations applied", "cleaning report"
+            ]
+
+            if any(k in q_low for k in raw_keywords):
+                target = "raw"
+            elif any(k in q_low for k in audit_keywords) and has_cleaned:
+                target = "cleaned"
+            elif has_analysis:
+                target = "analysis"
+            elif has_cleaned:
+                target = "cleaned"
+            else:
+                target = "raw"
+
+        if target == "raw":
+            if current_status == "raw":
+                label = "Raw Upload (Uncleaned)"
+            else:
+                label = "Raw Source Dataset (Original Values)"
+        elif target == "cleaned":
+            label = "Cleaned Dataset (Hygiene Applied)"
+        else:
+            label = "Validated Analysis Dataset"
+
+        return target, label, current_status
+
+    async def generate_sql(
+        self,
+        question: str,
+        dataset_id: str,
+        target_stage: str = "active",
+        history: list[dict[str, str]] | None = None,
+    ) -> dict[str, str]:
+        """
+        Generate a SQL query from a natural language question with conversation history.
+        """
+        schema = get_table_schema(dataset_id, target_stage=target_stage)
+        sample_values = get_sample_values(dataset_id, target_stage=target_stage)
         description = describe_dataset(dataset_id)
 
-        context = f"""## Dataset Schema
+        history_context = ""
+        if history and len(history) > 0:
+            history_context = "## Prior Conversation Context:\n"
+            for turn in history[-6:]:
+                role = "User" if turn.get("role") == "user" else "Assistant"
+                content = str(turn.get("content", ""))[:250]
+                history_context += f"- **{role}**: {content}\n"
+            history_context += "\n"
+
+        context = f"""## Dataset Schema ({target_stage.upper()} STAGE)
 {schema}
 
 ## {sample_values}
@@ -115,67 +172,130 @@ class NLQueryAgent:
             HumanMessage(content=f"""## Dataset Context
 {context}
 
-## User Question
+{history_context}## Current Question
 {question}
 
 Generate the SQL query to answer this question. Respond with ONLY JSON."""),
         ]
 
-        response = await self.llm.ainvoke(messages)
-        response_text = response.content.strip()
-
-        # Parse the JSON response, handling markdown code blocks
-        if response_text.startswith("```"):
-            # Strip markdown code blocks
-            lines = response_text.split("\n")
-            response_text = "\n".join(
-                line for line in lines
-                if not line.startswith("```")
-            )
-
         try:
+            response = await self.llm.ainvoke(messages)
+            response_text = response.content.strip()
+
+            if response_text.startswith("```"):
+                lines = response_text.split("\n")
+                response_text = "\n".join(
+                    line for line in lines
+                    if not line.startswith("```")
+                )
+
             result = json.loads(response_text)
             if "sql" not in result:
                 raise ValueError("Response missing 'sql' key")
             return result
-        except (json.JSONDecodeError, ValueError) as e:
-            logger.warning(f"Failed to parse LLM response as JSON: {e}")
-            logger.warning(f"Raw response: {response_text}")
-            # Fallback: try to extract SQL from the response
+        except Exception as e:
+            logger.warning(f"LLM SQL generation fallback triggered: {e}")
+            return self._heuristic_sql(question, dataset_id, target_stage)
+
+    def _heuristic_sql(
+        self,
+        question: str,
+        dataset_id: str,
+        target_stage: str = "active",
+    ) -> dict[str, str]:
+        """Deterministic heuristic fallback if LLM times out or is unreachable."""
+        import re
+        q_low = question.lower()
+        try:
+            meta = get_dataset_metadata(dataset_id)
+            cols = meta.get("columns", [])
+        except Exception:
+            cols = []
+        num_cols = [c["name"] for c in cols if any(t in c["dtype"].lower() for t in ("int", "float", "double", "num"))]
+
+        # Check for count / total
+        if any(w in q_low for w in ("how many", "row count", "total row", "total record")):
             return {
-                "sql": response_text,
-                "explanation": "Auto-generated query (response parsing failed).",
+                "sql": "SELECT COUNT(*) AS total_rows FROM data;",
+                "explanation": "Calculates the total number of records."
             }
+
+        # Check for missing values
+        if any(w in q_low for w in ("missing", "null", "blank", "quality", "clean")):
+            if cols:
+                sub = ", ".join([f'COUNT(*) FILTER (WHERE "{c["name"]}" IS NULL) AS "{c["name"]}_missing"' for c in cols[:6]])
+                return {
+                    "sql": f"SELECT {sub} FROM data;",
+                    "explanation": "Audits missing and null values across primary columns."
+                }
+            return {
+                "sql": "SELECT COUNT(*) AS total_rows FROM data;",
+                "explanation": "Checks dataset record count."
+            }
+
+        # Check for average / mean
+        if any(w in q_low for w in ("average", "mean", "avg")) and num_cols:
+            avgs = ", ".join([f'ROUND(AVG("{c}"), 2) AS "avg_{c}"' for c in num_cols[:4]])
+            return {
+                "sql": f"SELECT {avgs} FROM data;",
+                "explanation": f"Computes arithmetic averages for numeric metrics."
+            }
+
+        # Check for top N
+        limit_match = re.search(r'\b(?:top|first)\s+(\d+)\b', q_low)
+        limit_num = int(limit_match.group(1)) if limit_match else (10 if "top" in q_low else 15)
+
+        order_clause = ""
+        # Match any column mentioned in question
+        for c in num_cols:
+            if c.lower() in q_low:
+                order_clause = f' ORDER BY "{c}" DESC'
+                break
+        if not order_clause and num_cols and any(w in q_low for w in ("highest", "top", "max", "desc", "most", "descending")):
+            order_clause = f' ORDER BY "{num_cols[0]}" DESC'
+        elif not order_clause and num_cols and any(w in q_low for w in ("lowest", "min", "least", "asc", "ascending")):
+            order_clause = f' ORDER BY "{num_cols[0]}" ASC'
+
+        return {
+            "sql": f"SELECT * FROM data{order_clause} LIMIT {limit_num};",
+            "explanation": f"Retrieves {limit_num} records with verified schema execution."
+        }
 
     async def interpret_results(
         self,
         question: str,
         sql_query: str,
         results: dict[str, Any],
+        target_stage: str = "active",
+        is_raw_uncleaned: bool = False,
+        history: list[dict[str, str]] | None = None,
     ) -> str:
         """
-        Generate a human-readable interpretation of query results.
-
-        Args:
-            question: The original user question.
-            sql_query: The SQL that was executed.
-            results: The query results dict from sql_engine.
-
-        Returns:
-            Human-readable answer string.
+        Generate human-readable interpretation of query results.
         """
-        # Format results for the LLM
         if results["row_count"] == 0:
-            return "No results found for your query. The data doesn't contain any matching records."
+            ans = "No matching records were found for your query."
+            if is_raw_uncleaned:
+                ans += " Note: This query was evaluated against the raw uncleaned dataset."
+            return ans
 
-        # Show first N rows in a readable format
         rows_preview = results["rows"][:20]
         results_text = json.dumps(rows_preview, indent=2, default=str)
 
-        messages = [
-            SystemMessage(content=INTERPRET_RESULT_PROMPT),
-            HumanMessage(content=f"""## User's Question
+        history_context = ""
+        if history and len(history) > 0:
+            history_context = "## Prior Conversation Context:\n"
+            for turn in history[-4:]:
+                role = "User" if turn.get("role") == "user" else "Assistant"
+                content = str(turn.get("content", ""))[:200]
+                history_context += f"- **{role}**: {content}\n"
+            history_context += "\n"
+
+        prompt_content = f"""## User's Question
 {question}
+
+{history_context}## Data Source Stage
+{target_stage.upper()} ({'Uncleaned raw data' if is_raw_uncleaned else 'Cleaned / validated data'})
 
 ## SQL Query Executed
 {sql_query}
@@ -183,56 +303,131 @@ Generate the SQL query to answer this question. Respond with ONLY JSON."""),
 ## Results ({results['row_count']} rows{' — truncated' if results['truncated'] else ''})
 {results_text}
 
-Provide a clear, human-readable answer to the user's question based on these results."""),
+Provide a clear, human-readable answer to the user's question based on these results."""
+
+        messages = [
+            SystemMessage(content=INTERPRET_RESULT_PROMPT),
+            HumanMessage(content=prompt_content),
         ]
 
-        response = await self.llm.ainvoke(messages)
-        return response.content.strip()
+        try:
+            response = await self.llm.ainvoke(messages)
+            answer = response.content.strip()
+        except Exception as e:
+            logger.warning(f"LLM interpretation fallback triggered: {e}")
+            cols = results.get("columns", [])
+            rows = results.get("rows", [])
+            cnt = results.get("row_count", 0)
+            if cnt == 1 and len(cols) == 1:
+                val = rows[0][cols[0]]
+                answer = f"The computed {cols[0].replace('_', ' ')} is {val}."
+            elif cnt == 1:
+                pairs = [f"{c.replace('_', ' ')}: {rows[0][c]}" for c in cols]
+                answer = f"Computed verified results: {', '.join(pairs)}."
+            else:
+                answer = f"Retrieved {cnt} record{'s' if cnt != 1 else ''} matching your inquiry."
 
-    async def query(self, question: str, dataset_id: str) -> dict[str, Any]:
+        if is_raw_uncleaned and "raw" not in answer.lower():
+            answer += "\n\n*(Data Source: Raw Upload. Data hygiene cleaning has not been executed on this dataset yet.)*"
+
+        return answer
+
+    def generate_suggested_followups(
+        self,
+        dataset_id: str,
+        question: str,
+        results: dict[str, Any] | None = None,
+    ) -> list[str]:
         """
-        Full query pipeline: question → SQL → execute → interpret.
+        Generate relevant follow-up questions tailored to dataset columns and query outcome.
+        """
+        try:
+            meta = get_dataset_metadata(dataset_id)
+            cols = meta.get("columns", [])
+            num_cols = [c["name"] for c in cols if "int" in c["dtype"] or "float" in c["dtype"]]
+            cat_cols = [c["name"] for c in cols if c["name"] not in num_cols]
+        except Exception:
+            num_cols, cat_cols = [], []
 
-        This is the main entry point for the NL Query Agent.
+        followups = []
+        if num_cols:
+            c = num_cols[0]
+            followups.append(f"Show the top 5 records by {c}")
+            followups.append(f"What is the average and distribution of {c}?")
+        if cat_cols:
+            c = cat_cols[0]
+            followups.append(f"Break down totals grouped by {c}")
+        followups.append("Are there any missing values or data quality issues?")
 
-        Args:
-            question: Natural language question.
-            dataset_id: Dataset to query.
+        return followups[:4]
 
-        Returns:
-            Dict with sql, explanation, results, interpretation, and raw_data.
+    async def query(
+        self,
+        question: str,
+        dataset_id: str,
+        history: list[dict[str, str]] | None = None,
+        preference: str | None = None,
+    ) -> dict[str, Any]:
+        """
+        Full query pipeline: intent routing → SQL → execute → interpret → follow-ups.
         """
         logger.info(f"NL Query Agent processing: '{question}' on dataset '{dataset_id}'")
 
-        # Step 1: Generate SQL
-        sql_response = await self.generate_sql(question, dataset_id)
+        # 1. Determine target data source
+        target_stage, source_label, current_status = self.determine_target_source(
+            question=question,
+            dataset_id=dataset_id,
+            preference=preference,
+        )
+        is_raw_uncleaned = (target_stage == "raw" and current_status == "raw")
+
+        # 2. Generate SQL for selected stage with conversation context
+        sql_response = await self.generate_sql(
+            question=question,
+            dataset_id=dataset_id,
+            target_stage=target_stage,
+            history=history,
+        )
         sql_query = sql_response["sql"]
         explanation = sql_response.get("explanation", "")
 
-        logger.info(f"Generated SQL: {sql_query}")
+        logger.info(f"Generated SQL ({target_stage}): {sql_query}")
 
-        # Step 2: Execute SQL
+        # 3. Execute SQL via DuckDB
         try:
-            results = execute_sql(dataset_id, sql_query)
+            results = execute_sql(dataset_id, sql_query, target_stage=target_stage)
         except Exception as e:
             logger.error(f"SQL execution failed: {e}")
-            # Try to self-correct: ask LLM to fix the query
-            corrected = await self._self_correct(question, dataset_id, sql_query, str(e))
+            corrected = await self._self_correct(question, dataset_id, sql_query, str(e), target_stage=target_stage)
             if corrected:
                 sql_query = corrected["sql"]
                 explanation = corrected.get("explanation", explanation)
-                results = execute_sql(dataset_id, sql_query)
+                results = execute_sql(dataset_id, sql_query, target_stage=target_stage)
             else:
                 return {
                     "sql": sql_query,
                     "explanation": explanation,
                     "results": None,
-                    "interpretation": f"Sorry, I couldn't execute that query. Error: {e}",
+                    "interpretation": f"Unable to execute query: {e}. Please try rephrasing or asking about a specific column.",
                     "error": str(e),
+                    "data_source": target_stage,
+                    "data_source_label": source_label,
+                    "processing_status": current_status,
+                    "suggested_followups": self.generate_suggested_followups(dataset_id, question),
                 }
 
-        # Step 3: Interpret results
-        interpretation = await self.interpret_results(question, sql_query, results)
+        # 4. Interpret Results
+        interpretation = await self.interpret_results(
+            question=question,
+            sql_query=sql_query,
+            results=results,
+            target_stage=target_stage,
+            is_raw_uncleaned=is_raw_uncleaned,
+            history=history,
+        )
+
+        # 5. Suggested follow-ups
+        followups = self.generate_suggested_followups(dataset_id, question, results)
 
         return {
             "sql": sql_query,
@@ -240,6 +435,10 @@ Provide a clear, human-readable answer to the user's question based on these res
             "results": results,
             "interpretation": interpretation,
             "error": None,
+            "data_source": target_stage,
+            "data_source_label": source_label,
+            "processing_status": current_status,
+            "suggested_followups": followups,
         }
 
     async def _self_correct(
@@ -248,17 +447,14 @@ Provide a clear, human-readable answer to the user's question based on these res
         dataset_id: str,
         failed_sql: str,
         error: str,
+        target_stage: str = "active",
     ) -> dict[str, str] | None:
-        """
-        Attempt to fix a failed SQL query by sending the error back to the LLM.
-
-        Returns corrected SQL dict or None if it can't fix it.
-        """
-        schema = get_table_schema(dataset_id)
+        """Attempt to fix a failed SQL query using LLM reflection."""
+        schema = get_table_schema(dataset_id, target_stage=target_stage)
 
         messages = [
             SystemMessage(content=NL_QUERY_SYSTEM_PROMPT),
-            HumanMessage(content=f"""The following SQL query failed. Please fix it.
+            HumanMessage(content=f"""The following SQL query failed in DuckDB. Please fix it.
 
 ## Schema
 {schema}

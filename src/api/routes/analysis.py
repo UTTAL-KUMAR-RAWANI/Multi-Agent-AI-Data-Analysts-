@@ -267,6 +267,12 @@ async def stream_multi_agent_pipeline(
             await asyncio.sleep(0.2)
 
             # ── 9. Final Complete & STOP ──
+            from src.tools.data_loader import set_dataset_stage, get_dataset
+            try:
+                set_dataset_stage(dataset_id, "validated", get_dataset(dataset_id))
+            except Exception as stg_err:
+                logger.warning(f"Could not set validated stage: {stg_err}")
+
             yield format_sse({
                 "event": "pipeline_complete",
                 "status": "stopped",

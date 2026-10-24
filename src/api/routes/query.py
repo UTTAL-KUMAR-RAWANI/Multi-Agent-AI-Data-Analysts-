@@ -36,13 +36,18 @@ async def natural_language_query(request: QueryRequest):
     """
     Query a dataset using natural language.
 
-    The AI translates your question to SQL, executes it,
+    The AI translates your question to SQL, executes it against the verified data source,
     and returns both the raw results and a human-readable interpretation.
     """
     agent = _get_agent()
 
     try:
-        result = await agent.query(request.question, request.dataset_id)
+        result = await agent.query(
+            question=request.question,
+            dataset_id=request.dataset_id,
+            history=request.history,
+            preference=request.preference,
+        )
     except DatasetNotFoundError:
         raise HTTPException(
             status_code=404,
@@ -59,7 +64,68 @@ async def natural_language_query(request: QueryRequest):
         interpretation=result["interpretation"],
         results=result.get("results"),
         error=result.get("error"),
+        data_source=result.get("data_source", "raw"),
+        data_source_label=result.get("data_source_label", "Raw Upload (Uncleaned)"),
+        processing_status=result.get("processing_status", "raw"),
+        suggested_followups=result.get("suggested_followups", []),
     )
+
+
+@router.get("/suggestions/{dataset_id}")
+async def get_query_suggestions(dataset_id: str):
+    """Get dynamic suggested questions based on dataset schema."""
+    from src.tools.data_loader import get_dataset_metadata
+    try:
+        meta = get_dataset_metadata(dataset_id)
+        cols = meta.get("columns", [])
+        num_cols = [c["name"] for c in cols if "int" in c["dtype"] or "float" in c["dtype"]]
+        cat_cols = [c["name"] for c in cols if c["name"] not in num_cols]
+
+        suggestions = []
+        if num_cols:
+            c = num_cols[0]
+            suggestions.append(f"What is the average and highest {c}?")
+            suggestions.append(f"Show the top 10 records by {c}")
+        if cat_cols:
+            c = cat_cols[0]
+            suggestions.append(f"What is the distribution of {c}?")
+        suggestions.append("Are there any missing values or quality anomalies?")
+        if len(num_cols) >= 2:
+            suggestions.append(f"What is the correlation between {num_cols[0]} and {num_cols[1]}?")
+
+        return {"dataset_id": dataset_id, "suggestions": suggestions[:4]}
+    except Exception as e:
+        return {
+            "dataset_id": dataset_id,
+            "suggestions": [
+                "What are the top 10 records?",
+                "Show summary statistics for numeric columns",
+                "Are there any missing values?",
+                "What is the distribution of the primary categories?",
+            ]
+        }
+
+
+@router.get("/status/{dataset_id}")
+async def get_dataset_processing_status(dataset_id: str):
+    """Get the current data lifecycle stage (raw, cleaned, validated) and audit info."""
+    from src.tools.data_loader import get_dataset_stage, get_cleaning_audit, get_dataset_metadata
+    try:
+        meta = get_dataset_metadata(dataset_id)
+        stage = get_dataset_stage(dataset_id)
+        audit = get_cleaning_audit(dataset_id)
+        return {
+            "success": True,
+            "dataset_id": dataset_id,
+            "stage": stage,
+            "stage_label": "Raw Upload (Uncleaned)" if stage == "raw" else ("Cleaned Dataset" if stage == "cleaned" else "Validated Analysis Dataset"),
+            "num_rows": meta.get("num_rows"),
+            "num_columns": meta.get("num_columns"),
+            "has_missing": meta.get("has_missing", False),
+            "cleaning_audit": audit,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=str(e))
 
 
 @router.post("/sql")
@@ -71,7 +137,7 @@ async def raw_sql_query(request: SQLRequest):
     The alias "data" is also available.
     """
     try:
-        results = execute_sql(request.dataset_id, request.sql)
+        results = execute_sql(request.dataset_id, request.sql, target_stage=request.target_stage)
         return results
     except DatasetNotFoundError:
         raise HTTPException(

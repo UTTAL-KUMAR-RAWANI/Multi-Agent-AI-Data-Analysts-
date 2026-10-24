@@ -93,15 +93,11 @@
                 </div>
                 {% endif %}
             </div>
-            <div class="dataset-card-footer" style="display: flex; gap: 0.5rem;">
+            <div class="dataset-card-footer">
                 <a href="/analysis/{{ ds.dataset_id }}" class="btn btn-primary btn-sm"
-                    id="btn-analyze-{{ ds.dataset_id }}">
+                    id="btn-analyze-{{ ds.dataset_id }}" style="width: 100%; justify-content: center;">
                     <i data-lucide="zap"></i>
                     <span>Analyze Studio</span>
-                </a>
-                <a href="/chat/{{ ds.dataset_id }}" class="btn btn-secondary btn-sm" id="btn-chat-{{ ds.dataset_id }}">
-                    <i data-lucide="message-circle"></i>
-                    <span>Chat</span>
                 </a>
             </div>
         </div>

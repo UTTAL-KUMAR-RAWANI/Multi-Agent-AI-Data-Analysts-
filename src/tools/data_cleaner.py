@@ -400,9 +400,6 @@ def auto_clean_dataset(
                 "details": outliers,
             })
 
-    # Update in memory storage & sync with DuckDB
-    update_dataset(dataset_id, cleaned_df)
-
     audit_log["final_rows"] = cleaned_df.shape[0]
     audit_log["final_cols"] = cleaned_df.shape[1]
     audit_log["final_missing_cells"] = int(cleaned_df.isnull().sum().sum())
@@ -411,6 +408,9 @@ def auto_clean_dataset(
         initial_shape[0], initial_missing, initial_dups,
         cleaned_df.shape[0], audit_log["final_missing_cells"], audit_log["final_duplicates"],
     )
+
+    # Update in memory storage & sync with DuckDB with explicit stage & audit
+    update_dataset(dataset_id, cleaned_df, stage="cleaned", audit_log=audit_log)
 
     logger.info(f"Dataset {dataset_id} cleaned successfully. New shape: {cleaned_df.shape}")
     return audit_log

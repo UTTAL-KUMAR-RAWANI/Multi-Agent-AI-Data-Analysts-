@@ -9,10 +9,10 @@
 {% endblock %}
 
 {% block top_actions %}
-<a href="/chat/{{ dataset_id }}" class="btn btn-secondary" id="btn-open-chat">
-    <i data-lucide="message-square"></i>
-    <span>NL Query Chat</span>
-</a>
+<button class="btn btn-secondary" id="btn-top-chat" onclick="openChatTab()">
+    <i data-lucide="message-square-text"></i>
+    <span>Ask DataWhale AI</span>
+</button>
 <a href="/" class="btn btn-ghost" id="btn-back">
     <i data-lucide="arrow-left"></i>
     <span>Dashboard</span>
@@ -317,18 +317,187 @@
         gap: 1.5rem;
     }
 
-    .loading-spinner {
-        display: inline-block;
-        width: 16px;
-        height: 16px;
-        border: 2px solid rgba(255,255,255,0.3);
-        border-radius: 50%;
-        border-top-color: #fff;
-        animation: spin 0.8s linear infinite;
+    /* Studio Integrated Chat Styles */
+    .studio-chat-wrapper {
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--surface-glass-border);
+        display: flex;
+        flex-direction: column;
+        min-height: 620px;
+        background: var(--bg-secondary);
+        overflow: hidden;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
     }
 
-    @keyframes spin {
-        to { transform: rotate(360deg); }
+    .studio-chat-header {
+        padding: 1.1rem 1.6rem;
+        border-bottom: 1px solid var(--surface-glass-border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+        background: rgba(255, 255, 255, 0.02);
+    }
+
+    .studio-chat-title-group {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .studio-chat-avatar {
+        width: 44px;
+        height: 44px;
+        border-radius: var(--radius-md);
+        background: var(--gradient-accent);
+        color: #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: var(--shadow-glow);
+        flex-shrink: 0;
+    }
+
+    .studio-schema-drawer {
+        padding: 0.85rem 1.6rem;
+        background: rgba(17, 17, 24, 0.95);
+        border-bottom: 1px solid var(--surface-glass-border);
+    }
+
+    .studio-schema-chips {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        max-height: 120px;
+        overflow-y: auto;
+    }
+
+    .studio-col-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        font-size: 0.76rem;
+        padding: 0.25rem 0.6rem;
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid var(--surface-glass-border);
+        color: var(--text-secondary);
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .studio-col-chip:hover {
+        background: var(--accent-subtle);
+        border-color: var(--accent);
+        color: var(--accent);
+    }
+
+    .studio-col-chip small {
+        color: var(--text-muted);
+        font-family: var(--font-mono);
+    }
+
+    .studio-chat-messages {
+        flex: 1;
+        min-height: 400px;
+        max-height: 560px;
+        overflow-y: auto;
+        padding: 1.5rem 1.6rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+    }
+
+    .studio-chat-input-area {
+        padding: 1.1rem 1.6rem;
+        border-top: 1px solid var(--surface-glass-border);
+        background: var(--bg-tertiary);
+    }
+
+    .studio-chat-input-area .chat-input-container {
+        display: flex;
+        align-items: flex-end;
+        gap: 0.75rem;
+        background: var(--bg-secondary);
+        border: 1px solid var(--surface-glass-border);
+        border-radius: var(--radius-md);
+        padding: 0.5rem 0.75rem;
+        transition: border-color var(--transition-fast);
+    }
+
+    .studio-chat-input-area .chat-input-container:focus-within {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 2px var(--accent-subtle);
+    }
+
+    .studio-chat-input-area textarea {
+        flex: 1;
+        background: transparent;
+        border: none;
+        outline: none;
+        color: var(--text-primary);
+        font-family: var(--font-sans);
+        font-size: 0.95rem;
+        line-height: 1.5;
+        resize: none;
+        max-height: 140px;
+        padding: 4px;
+    }
+
+    .source-meta-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        font-size: 0.74rem;
+        font-weight: 600;
+        padding: 0.2rem 0.55rem;
+        border-radius: 4px;
+        margin-top: 0.5rem;
+    }
+
+    .source-meta-tag.raw {
+        background: rgba(245, 158, 11, 0.12);
+        color: #fbbf24;
+        border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+
+    .source-meta-tag.cleaned,
+    .source-meta-tag.validated {
+        background: rgba(16, 185, 129, 0.12);
+        color: #34d399;
+        border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .followup-chips-row {
+        display: flex;
+        gap: 0.45rem;
+        flex-wrap: wrap;
+        margin-top: 0.75rem;
+        padding-top: 0.65rem;
+        border-top: 1px dashed var(--surface-glass-border);
+    }
+
+    .followup-chip-btn {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid var(--surface-glass-border);
+        color: var(--text-secondary);
+        padding: 0.3rem 0.65rem;
+        border-radius: 999px;
+        font-size: 0.78rem;
+        font-weight: 550;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        transition: all var(--transition-fast);
+    }
+
+    .followup-chip-btn:hover {
+        background: var(--accent-subtle);
+        border-color: var(--accent);
+        color: var(--accent);
+        transform: translateY(-1px);
     }
 </style>
 {% endblock %}
@@ -345,18 +514,14 @@
                     Deploy 8 specialized AI agents executed in sequence to clean, explore, test hypotheses, build machine learning models, and generate interactive visuals.
                 </p>
             </div>
-            <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+            <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
                 <button class="btn btn-primary" id="btn-run-full" onclick="runPipeline('full')">
                     <i data-lucide="zap"></i>
                     <span>Run Full Multi-Agent Pipeline</span>
                 </button>
-                <button class="btn btn-secondary" id="btn-run-clean" onclick="runPipeline('clean')">
-                    <i data-lucide="sparkles"></i>
-                    <span>Clean Data</span>
-                </button>
-                <button class="btn btn-secondary" id="btn-run-eda" onclick="runPipeline('eda')">
-                    <i data-lucide="pie-chart"></i>
-                    <span>Run EDA</span>
+                <button class="btn btn-secondary" id="btn-hero-chat" onclick="openChatTab()">
+                    <i data-lucide="message-square-text"></i>
+                    <span>Ask DataWhale AI</span>
                 </button>
             </div>
         </div>
@@ -461,25 +626,29 @@
         </div>
     </div>
 
-    <!-- Tabs Navigation -->
+    <!-- Tabs Navigation (7 Distinct Studio Workspaces) -->
     <div class="studio-tabs">
-        <button class="studio-tab-btn active" onclick="switchTab('tab-synthesis', this)">
+        <button class="studio-tab-btn active" id="tab-btn-synthesis" onclick="switchTab('tab-synthesis', this)">
             <i data-lucide="file-text"></i> Executive Briefing
         </button>
-        <button class="studio-tab-btn" onclick="switchTab('tab-visuals', this)">
+        <button class="studio-tab-btn" id="tab-btn-visuals" onclick="switchTab('tab-visuals', this)">
             <i data-lucide="bar-chart-3"></i> Visual Analytics
         </button>
-        <button class="studio-tab-btn" onclick="switchTab('tab-ml', this)">
+        <button class="studio-tab-btn" id="tab-btn-ml" onclick="switchTab('tab-ml', this)">
             <i data-lucide="cpu"></i> Machine Learning
         </button>
-        <button class="studio-tab-btn" onclick="switchTab('tab-eda', this)">
+        <button class="studio-tab-btn" id="tab-btn-eda" onclick="switchTab('tab-eda', this)">
             <i data-lucide="scan-search"></i> Exploratory Profiling
         </button>
-        <button class="studio-tab-btn" onclick="switchTab('tab-clean', this)">
+        <button class="studio-tab-btn" id="tab-btn-clean" onclick="switchTab('tab-clean', this)">
             <i data-lucide="sparkles"></i> Data Hygiene Audit
         </button>
-        <button class="studio-tab-btn" onclick="switchTab('tab-qa', this)">
+        <button class="studio-tab-btn" id="tab-btn-qa" onclick="switchTab('tab-qa', this)">
             <i data-lucide="shield-check"></i> QA Verification
+        </button>
+        <button class="studio-tab-btn" id="tab-btn-chat" onclick="switchTab('tab-chat', this)">
+            <i data-lucide="message-square-text"></i> Ask DataWhale AI
+            <span class="badge badge-accent" style="margin-left: 4px; font-size: 0.68rem; padding: 1px 6px;">Chat</span>
         </button>
     </div>
 
@@ -519,22 +688,44 @@
         </div>
     </div>
 
-    <!-- TAB 4: EDA -->
+    <!-- TAB 4: EDA (with Standalone Run EDA action preserved) -->
     <div id="tab-eda" class="tab-content">
         <div class="glass-card" style="padding: 1.8rem;" id="eda-container">
-            <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 1rem;">Exploratory Data Analysis</h3>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
+                <div>
+                    <h3 style="font-size: 1.25rem; font-weight: 700;">Exploratory Data Analysis</h3>
+                    <p style="color: var(--text-secondary); font-size: 0.88rem; margin-top: 0.2rem;">
+                        Inspect summary distributions, correlation matrix, skewness, and data anomalies.
+                    </p>
+                </div>
+                <button class="btn btn-secondary btn-sm" id="btn-run-eda-section" onclick="runPipeline('eda')">
+                    <i data-lucide="scan-search"></i>
+                    <span>Run EDA Profiling Agent</span>
+                </button>
+            </div>
             <div id="eda-content" style="color: var(--text-secondary);">
-                Summary distributions, correlation matrix, and data anomalies will appear here.
+                Summary distributions, correlation matrix, and data anomalies will appear here. Click "Run EDA Profiling Agent" to profile immediately.
             </div>
         </div>
     </div>
 
-    <!-- TAB 5: Data Hygiene -->
+    <!-- TAB 5: Data Hygiene (with Standalone Clean Data action preserved) -->
     <div id="tab-clean" class="tab-content">
         <div class="glass-card" style="padding: 1.8rem;" id="clean-container">
-            <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 1rem;">Data Cleaning & Quality Audit</h3>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
+                <div>
+                    <h3 style="font-size: 1.25rem; font-weight: 700;">Data Cleaning & Quality Audit</h3>
+                    <p style="color: var(--text-secondary); font-size: 0.88rem; margin-top: 0.2rem;">
+                        Automated missing value imputations, duplicate removals, type standardizations, and outlier handling.
+                    </p>
+                </div>
+                <button class="btn btn-secondary btn-sm" id="btn-run-clean-section" onclick="runPipeline('clean')">
+                    <i data-lucide="sparkles"></i>
+                    <span>Run Data Cleaner Agent</span>
+                </button>
+            </div>
             <div id="clean-content" style="color: var(--text-secondary);">
-                Audit log of missing value imputations, duplicate removals, and outlier clipping will be recorded here.
+                Audit log of missing value imputations, duplicate removals, and outlier clipping will be recorded here. Click "Run Data Cleaner Agent" to execute data hygiene.
             </div>
         </div>
     </div>
@@ -545,6 +736,100 @@
             <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 1rem;">Quality Assurance Review Log</h3>
             <div id="qa-content" style="color: var(--text-secondary);">
                 Audits performed by the QA Agent checking statistical validity and potential data leaks.
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 7: Ask DataWhale AI (Integrated Dataset Chat Workspace) -->
+    <div id="tab-chat" class="tab-content">
+        <div class="studio-chat-wrapper">
+            <!-- Studio Chat Header & Status Bar -->
+            <div class="studio-chat-header">
+                <div class="studio-chat-title-group">
+                    <div class="studio-chat-avatar">
+                        <i data-lucide="message-square-text"></i>
+                    </div>
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                            <h3 style="font-size: 1.15rem; font-weight: 700; margin: 0;">Dataset AI Analyst</h3>
+                            <span id="chat-data-source-badge" class="badge badge-accent">
+                                <i data-lucide="database"></i>
+                                <span id="chat-source-label">Source: Loading...</span>
+                            </span>
+                            <span class="badge badge-info">{{ '{:,}'.format(metadata.num_rows) }} rows × {{ metadata.num_columns }} cols</span>
+                        </div>
+                        <p style="font-size: 0.82rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                            Natural-language SQL & analytical engine scoped to <strong>{{ metadata.file_name }}</strong>. Ask questions in plain English.
+                        </p>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                    <button class="btn btn-ghost btn-sm" onclick="clearStudioChat()" title="Reset Conversation" aria-label="Reset Conversation">
+                        <i data-lucide="rotate-ccw"></i>
+                        <span>Reset</span>
+                    </button>
+                    <button class="btn btn-ghost btn-sm" onclick="toggleStudioSchema()" id="btn-toggle-studio-schema" title="Toggle Schema Drawer">
+                        <i data-lucide="table-properties"></i>
+                        <span>Schema</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Optional Collapsible Schema Bar -->
+            <div id="studio-schema-drawer" class="studio-schema-drawer" style="display: none;">
+                <div class="studio-schema-chips">
+                    {% for col in metadata.columns %}
+                    <span class="studio-col-chip" onclick="insertColToChat('{{ col.name }}')" title="Type: {{ col.dtype }} (click to ask)">
+                        <strong>{{ col.name }}</strong> <small>{{ col.dtype }}</small>
+                    </span>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Messages Stream Area -->
+            <div class="studio-chat-messages" id="studio-chat-messages">
+                <!-- Welcome Message -->
+                <div class="message message-system">
+                    <div class="message-avatar">
+                        <i data-lucide="brain-circuit"></i>
+                    </div>
+                    <div class="message-content">
+                        <div class="message-header">
+                            <span class="message-sender">DataWhale AI</span>
+                        </div>
+                        <div class="message-body">
+                            <p>Hello! I'm ready to analyze <strong>{{ metadata.file_name }}</strong> ({{ '{:,}'.format(metadata.num_rows) }} rows × {{ metadata.num_columns }} columns).</p>
+                            <p style="margin-top: 6px;">Ask any question about your data without needing SQL or statistics. Click any suggested prompt below or type your own question:</p>
+                            <div class="suggestion-chips" id="studio-suggestion-chips" style="margin-top: 0.75rem;">
+                                <!-- Dynamically loaded from dataset columns -->
+                                <button class="chip" onclick="askStudioQuestion('What are the top 10 records by primary metrics?')">Top 10 records</button>
+                                <button class="chip" onclick="askStudioQuestion('Show summary statistics for numeric columns')">Summary statistics</button>
+                                <button class="chip" onclick="askStudioQuestion('Are there any missing values or data anomalies?')">Check missing data</button>
+                                <button class="chip" onclick="askStudioQuestion('What is the distribution of key attributes?')">Distribution profile</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input Box Area -->
+            <div class="studio-chat-input-area">
+                <div class="chat-input-container">
+                    <textarea
+                        id="studio-chat-input"
+                        placeholder="Ask a question about {{ metadata.file_name }}... (e.g., 'Which category has the highest average?', 'Show distribution of rows')"
+                        rows="1"
+                    ></textarea>
+                    <button class="btn btn-primary btn-send" id="btn-studio-send" onclick="sendStudioMessage()" title="Send Question" aria-label="Send Question">
+                        <i data-lucide="send-horizontal"></i>
+                    </button>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px; font-size: 0.76rem; color: var(--text-muted); flex-wrap: wrap; gap: 0.5rem;">
+                    <span>Press <kbd style="background: rgba(255,255,255,0.08); padding: 1px 5px; border-radius: 4px;">Enter</kbd> to send • <kbd style="background: rgba(255,255,255,0.08); padding: 1px 5px; border-radius: 4px;">Shift+Enter</kbd> for new line</span>
+                    <span id="chat-engine-status" style="display: inline-flex; align-items: center; gap: 5px;">
+                        <span class="status-pulse-dot stopped" style="width: 7px; height: 7px;"></span> DuckDB Engine Ready
+                    </span>
+                </div>
             </div>
         </div>
     </div>
@@ -619,11 +904,13 @@
         }
 
         const runFullBtn = document.getElementById('btn-run-full');
-        const cleanBtn = document.getElementById('btn-run-clean');
-        const edaBtn = document.getElementById('btn-run-eda');
+        const cleanBtn = document.getElementById('btn-run-clean-section') || document.getElementById('btn-run-clean');
+        const edaBtn = document.getElementById('btn-run-eda-section') || document.getElementById('btn-run-eda');
 
         [runFullBtn, cleanBtn, edaBtn].forEach(b => { if (b) b.disabled = true; });
-        runFullBtn.innerHTML = `<span class="loading-spinner"></span> <span>Running Sequence...</span>`;
+        if (runFullBtn) {
+            runFullBtn.innerHTML = `<span class="loading-spinner"></span> <span>Running Sequence...</span>`;
+        }
 
         resetPipelineChips();
 
@@ -901,6 +1188,9 @@
         }
 
         lucide.createIcons();
+        if (typeof loadChatStatus === 'function') {
+            loadChatStatus();
+        }
     }
 
     async function fallbackRunPipeline(mode, runFullBtn, cleanBtn, edaBtn) {
@@ -933,5 +1223,366 @@
             showToast('Error: ' + err.message, 'error');
         }
     }
+
+    /* -------------------------------------------------------------
+       INTEGRATED STUDIO CHAT: Ask DataWhale AI
+    ------------------------------------------------------------- */
+    let studioChatHistory = [];
+    let isStudioProcessing = false;
+
+    function openChatTab() {
+        const chatTabBtn = document.getElementById('tab-btn-chat');
+        switchTab('tab-chat', chatTabBtn);
+        const chatInput = document.getElementById('studio-chat-input');
+        if (chatInput) {
+            setTimeout(() => chatInput.focus(), 80);
+        }
+        const chatTab = document.getElementById('tab-chat');
+        if (chatTab) {
+            chatTab.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    }
+
+    function toggleStudioSchema() {
+        const drawer = document.getElementById('studio-schema-drawer');
+        if (!drawer) return;
+        drawer.style.display = (drawer.style.display === 'none' || drawer.style.display === '') ? 'block' : 'none';
+    }
+
+    function insertColToChat(colName) {
+        const input = document.getElementById('studio-chat-input');
+        if (!input) return;
+        const currentVal = input.value.trim();
+        if (currentVal) {
+            input.value = currentVal + ' "' + colName + '"';
+        } else {
+            input.value = 'Show statistics for "' + colName + '"';
+        }
+        input.focus();
+    }
+
+    function clearStudioChat() {
+        studioChatHistory = [];
+        const messagesContainer = document.getElementById('studio-chat-messages');
+        if (!messagesContainer) return;
+
+        messagesContainer.innerHTML = `
+            <div class="message message-system">
+                <div class="message-avatar">
+                    <i data-lucide="brain-circuit"></i>
+                </div>
+                <div class="message-content">
+                    <div class="message-header">
+                        <span class="message-sender">DataWhale AI</span>
+                    </div>
+                    <div class="message-body">
+                        <p>Conversation reset. Ready to analyze <strong>{{ metadata.file_name }}</strong>.</p>
+                        <p style="margin-top: 6px;">Ask any question about your data or click a suggested prompt:</p>
+                        <div class="suggestion-chips" id="studio-suggestion-chips" style="margin-top: 0.75rem;">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        loadChatSuggestions();
+        lucide.createIcons();
+    }
+
+    async function loadChatStatus() {
+        try {
+            const res = await fetch(`/api/query/status/${encodeURIComponent(datasetId)}`);
+            if (res.ok) {
+                const data = await res.json();
+                const labelEl = document.getElementById('chat-source-label');
+                const badgeEl = document.getElementById('chat-data-source-badge');
+                if (labelEl && data.stage_label) {
+                    labelEl.innerText = `Source: ${data.stage_label}`;
+                }
+                if (badgeEl && data.stage) {
+                    if (data.stage === 'validated') {
+                        badgeEl.className = 'badge badge-success';
+                    } else if (data.stage === 'cleaned') {
+                        badgeEl.className = 'badge badge-info';
+                    } else {
+                        badgeEl.className = 'badge badge-accent';
+                    }
+                }
+            }
+        } catch(e) {
+            console.warn('Failed to load chat status:', e);
+        }
+    }
+
+    async function loadChatSuggestions() {
+        const chipsContainer = document.getElementById('studio-suggestion-chips');
+        if (!chipsContainer) return;
+        try {
+            const res = await fetch(`/api/query/suggestions/${encodeURIComponent(datasetId)}`);
+            if (res.ok) {
+                const data = await res.json();
+                if (data.suggestions && data.suggestions.length > 0) {
+                    chipsContainer.innerHTML = data.suggestions.map(s => {
+                        const escaped = s.replace(/'/g, "\\'");
+                        return `<button class="chip" onclick="askStudioQuestion('${escaped}')">${escapeStudioHtml(s)}</button>`;
+                    }).join('');
+                    return;
+                }
+            }
+        } catch(e) {
+            console.warn('Failed to load dynamic suggestions:', e);
+        }
+    }
+
+    function askStudioQuestion(text) {
+        const input = document.getElementById('studio-chat-input');
+        if (!input) return;
+        input.value = text;
+        sendStudioMessage();
+    }
+
+    function addStudioMessage(type, contentHtml) {
+        const container = document.getElementById('studio-chat-messages');
+        if (!container) return null;
+
+        const div = document.createElement('div');
+        div.className = `message message-${type}`;
+        const avatarIcon = type === 'user' ? 'user' : 'brain-circuit';
+        const sender = type === 'user' ? 'You' : 'DataWhale AI';
+
+        div.innerHTML = `
+            <div class="message-avatar">
+                <i data-lucide="${avatarIcon}"></i>
+            </div>
+            <div class="message-content">
+                <div class="message-header">
+                    <span class="message-sender">${sender}</span>
+                </div>
+                <div class="message-body">${contentHtml}</div>
+            </div>
+        `;
+
+        container.appendChild(div);
+        lucide.createIcons();
+        container.scrollTop = container.scrollHeight;
+        return div;
+    }
+
+    function addStudioLoading() {
+        const container = document.getElementById('studio-chat-messages');
+        if (!container) return null;
+
+        const div = document.createElement('div');
+        div.className = 'message message-system';
+        div.id = 'studio-loading-msg';
+        div.innerHTML = `
+            <div class="message-avatar">
+                <i data-lucide="brain-circuit"></i>
+            </div>
+            <div class="message-content">
+                <div class="message-header">
+                    <span class="message-sender">DataWhale AI</span>
+                </div>
+                <div class="message-body">
+                    <div class="typing-indicator">
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                    </div>
+                </div>
+            </div>
+        `;
+        container.appendChild(div);
+        lucide.createIcons();
+        container.scrollTop = container.scrollHeight;
+        return div;
+    }
+
+    function removeStudioLoading() {
+        const el = document.getElementById('studio-loading-msg');
+        if (el) el.remove();
+    }
+
+    function escapeStudioHtml(str) {
+        if (str === null || str === undefined) return '';
+        const d = document.createElement('div');
+        d.textContent = String(str);
+        return d.innerHTML;
+    }
+
+    function formatStudioCell(value) {
+        if (value === null || value === undefined) return '<span class="null-value" style="color:var(--text-muted); font-style:italic;">NULL</span>';
+        if (typeof value === 'number') {
+            return Number.isInteger(value) ? value.toLocaleString() : value.toLocaleString(undefined, {maximumFractionDigits: 4});
+        }
+        return escapeStudioHtml(String(value));
+    }
+
+    function formatStudioResults(data) {
+        let html = '';
+
+        // Source meta tag
+        if (data.data_source_label) {
+            html += `
+                <div class="source-meta-tag">
+                    <i data-lucide="database"></i>
+                    <span>${escapeStudioHtml(data.data_source_label)}</span>
+                    ${data.processing_status ? `<span style="opacity:0.75;">• ${escapeStudioHtml(data.processing_status)}</span>` : ''}
+                </div>
+            `;
+        }
+
+        // Interpretation / answer
+        const interp = data.interpretation || (data.error ? data.error : 'Query executed successfully.');
+        html += `<div style="font-size: 0.95rem; line-height: 1.6; margin-bottom: 0.6rem;">${escapeStudioHtml(interp).replace(/\n/g, '<br>')}</div>`;
+
+        // Collapsible SQL query
+        if (data.sql) {
+            html += `
+                <details class="sql-details" style="margin: 0.6rem 0;">
+                    <summary><i data-lucide="code-2"></i> View Verified SQL Query</summary>
+                    <pre><code>${escapeStudioHtml(data.sql)}</code></pre>
+                    ${data.explanation ? `<p class="sql-explanation" style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.35rem;">${escapeStudioHtml(data.explanation)}</p>` : ''}
+                </details>
+            `;
+        }
+
+        // Table if rows exist
+        if (data.results && data.results.rows && data.results.rows.length > 0) {
+            const columns = data.results.columns || Object.keys(data.results.rows[0]);
+            const rows = data.results.rows.slice(0, 15);
+            html += `
+                <div class="result-table-wrapper" style="margin: 0.65rem 0; overflow-x: auto; max-height: 320px;">
+                    <table class="result-table" style="width: 100%;">
+                        <thead>
+                            <tr>${columns.map(c => `<th>${escapeStudioHtml(c)}</th>`).join('')}</tr>
+                        </thead>
+                        <tbody>
+                            ${rows.map(r => `<tr>${columns.map(c => `<td>${formatStudioCell(r[c])}</td>`).join('')}</tr>`).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            if (data.results.row_count > 15) {
+                html += `<p class="table-note" style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 0.5rem;">Showing first 15 of ${data.results.row_count} rows</p>`;
+            }
+        }
+
+        // Suggested follow-up chips
+        if (data.suggested_followups && data.suggested_followups.length > 0) {
+            html += `
+                <div style="margin-top: 0.85rem; padding-top: 0.65rem; border-top: 1px solid rgba(255,255,255,0.06);">
+                    <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.35rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">
+                        Suggested Follow-up
+                    </div>
+                    <div class="followup-chips-group">
+                        ${data.suggested_followups.map(s => {
+                            const escaped = s.replace(/'/g, "\\'");
+                            return `<button class="followup-chip-btn" onclick="askStudioQuestion('${escaped}')"><i data-lucide="corner-down-right" style="width: 12px; height: 12px;"></i><span>${escapeStudioHtml(s)}</span></button>`;
+                        }).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        return html;
+    }
+
+    async function sendStudioMessage() {
+        const input = document.getElementById('studio-chat-input');
+        const sendBtn = document.getElementById('btn-studio-send');
+        if (!input || isStudioProcessing) return;
+
+        const text = input.value.trim();
+        if (!text) return;
+
+        isStudioProcessing = true;
+        if (sendBtn) sendBtn.disabled = true;
+        input.value = '';
+        input.style.height = 'auto';
+
+        // Add user message
+        addStudioMessage('user', `<p>${escapeStudioHtml(text)}</p>`);
+
+        // Show typing indicator
+        addStudioLoading();
+
+        try {
+            const response = await fetch('/api/query/nl', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    question: text,
+                    dataset_id: datasetId,
+                    history: studioChatHistory,
+                    preference: 'auto'
+                })
+            });
+
+            removeStudioLoading();
+
+            if (!response.ok) {
+                const err = await response.json().catch(() => ({}));
+                addStudioMessage('system', `<p class="error-text" style="color: var(--danger);">Error: ${escapeStudioHtml(err.detail || 'Failed to process query')}</p>`);
+            } else {
+                const data = await response.json();
+                if (data.error && !data.interpretation) {
+                    addStudioMessage('system', `<p class="error-text" style="color: var(--danger);">${escapeStudioHtml(data.error)}</p>`);
+                } else {
+                    addStudioMessage('system', formatStudioResults(data));
+
+                    // Append to conversational context
+                    studioChatHistory.push({ role: 'user', content: text });
+                    studioChatHistory.push({
+                        role: 'assistant',
+                        content: (data.interpretation || '') + (data.sql ? ' [SQL: ' + data.sql + ']' : '')
+                    });
+                    if (studioChatHistory.length > 10) {
+                        studioChatHistory = studioChatHistory.slice(-10);
+                    }
+
+                    // Update source badge if returned
+                    if (data.data_source_label) {
+                        const labelEl = document.getElementById('chat-source-label');
+                        if (labelEl) labelEl.innerText = `Source: ${data.data_source_label}`;
+                    }
+                }
+            }
+        } catch(error) {
+            removeStudioLoading();
+            addStudioMessage('system', `<p class="error-text" style="color: var(--danger);">Connection error: ${escapeStudioHtml(error.message)}</p>`);
+        } finally {
+            isStudioProcessing = false;
+            if (sendBtn) sendBtn.disabled = false;
+            input.focus();
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const chatInput = document.getElementById('studio-chat-input');
+        if (chatInput) {
+            chatInput.addEventListener('input', () => {
+                chatInput.style.height = 'auto';
+                chatInput.style.height = Math.min(chatInput.scrollHeight, 140) + 'px';
+            });
+            chatInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendStudioMessage();
+                }
+            });
+        }
+
+        // Load dynamic suggestions and dataset stage status
+        loadChatStatus();
+        loadChatSuggestions();
+
+        // Check if navigated with ?tab=chat or #chat
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('tab') === 'chat' || window.location.hash === '#chat') {
+            openChatTab();
+        }
+
+        lucide.createIcons();
+    });
 </script>
 {% endblock %}

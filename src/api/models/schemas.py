@@ -14,12 +14,15 @@ class QueryRequest(BaseModel):
     """Request to query a dataset with natural language."""
     question: str = Field(..., description="Natural language question about the data")
     dataset_id: str = Field(..., description="ID of the dataset to query")
+    history: list[dict[str, str]] | None = Field(default=None, description="Recent conversation history for follow-ups")
+    preference: str | None = Field(default=None, description="Preferred data source: auto, raw, cleaned, or analysis")
 
 
 class SQLRequest(BaseModel):
     """Request to execute raw SQL on a dataset."""
     sql: str = Field(..., description="SQL query to execute")
     dataset_id: str = Field(..., description="ID of the dataset to query")
+    target_stage: str = Field(default="active", description="Stage to query: active, raw, cleaned, or analysis")
 
 
 # ─── Responses ──────────────────────────────────────────────
@@ -38,13 +41,17 @@ class DatasetResponse(BaseModel):
 
 
 class QueryResponse(BaseModel):
-    """Response from a natural language query."""
+    """Response from a natural language query with verified data source audit."""
     question: str
     sql: str
     explanation: str
     interpretation: str
     results: dict[str, Any] | None = None
     error: str | None = None
+    data_source: str | None = "raw"
+    data_source_label: str | None = "Raw Upload (Uncleaned)"
+    processing_status: str | None = "raw"
+    suggested_followups: list[str] = []
 
 
 class DatasetListResponse(BaseModel):
