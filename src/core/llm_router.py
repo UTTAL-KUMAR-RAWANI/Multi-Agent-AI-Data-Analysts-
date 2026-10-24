@@ -49,7 +49,12 @@ def _create_ollama_llm(model: str, base_url: str, temperature: float = 0.1) -> B
     )
 
 
-def _create_llamafile_llm(model: str, base_url: str, temperature: float = 0.1) -> BaseChatModel:
+def _create_llamafile_llm(
+    model: str,
+    base_url: str,
+    temperature: float = 0.1,
+    timeout: float = 60.0,
+) -> BaseChatModel:
     """Create a Llamafile (local OpenAI-compatible) chat model."""
     from langchain_openai import ChatOpenAI
     return ChatOpenAI(
@@ -57,8 +62,9 @@ def _create_llamafile_llm(model: str, base_url: str, temperature: float = 0.1) -
         base_url=base_url,
         api_key="no-key-required",
         temperature=temperature,
-        timeout=8.0,
-        max_retries=1,
+        timeout=timeout,
+        max_retries=0,
+        max_tokens=512,
     )
 
 
@@ -74,7 +80,7 @@ _LLM_FACTORIES = {
         model, settings.ollama_base_url, temp
     ),
     LLMProvider.LLAMAFILE: lambda model, settings, temp: _create_llamafile_llm(
-        model, settings.llamafile_base_url, temp
+        model, settings.llamafile_base_url, temp, settings.llamafile_timeout
     ),
 }
 

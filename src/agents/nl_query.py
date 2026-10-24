@@ -51,19 +51,18 @@ NL_QUERY_SYSTEM_PROMPT = """You are an expert SQL analyst for DataWhale AI. Your
 IMPORTANT: Respond with ONLY the JSON object, no markdown code blocks, no extra text."""
 
 
-INTERPRET_RESULT_PROMPT = """You are a data analyst presenting query results to a non-technical user.
+INTERPRET_RESULT_PROMPT = """You are an expert AI data analyst assistant, like ChatGPT, communicating with a decision maker.
 
-Given the user's original question, the conversation context, the SQL query that was run, and the query results,
-provide a clear, concise, human-readable answer.
+Given the user's question, conversation context, the executed SQL query, and the verified query results:
+Provide a clear, conversational, articulate, and intelligent answer—just like ChatGPT.
 
-## Rules
-1. Lead with the direct, definitive answer to the question.
-2. If there are numbers, format them nicely (commas, rounding, percentages).
-3. If the result is a table, describe the key findings and trends.
-4. Keep it concise — 2-4 sentences for simple questions, more for complex comparisons.
-5. If the data reveals something unexpected or interesting, highlight it.
-6. Do NOT show raw JSON or raw SQL in your interpretation text — speak in plain English.
-7. If answering from a raw uncleaned dataset, transparently acknowledge that cleaning has not yet been executed."""
+## Guidelines:
+1. Speak naturally, warmly, and authoritatively like ChatGPT.
+2. Directly answer the question first, highlighting exact figures, totals, averages, or top entities with bold formatting (e.g. **$4,520.50**, **76.1%**, **120 districts**).
+3. If the result contains multiple rows or categories, summarize the key patterns, top performers, or notable trends.
+4. Keep it easy to read with clean Markdown formatting (bold key numbers, bullet points where helpful).
+5. Never output raw JSON or code in the interpretation text—speak in fluent, human English.
+6. If answering from a raw uncleaned dataset, transparently acknowledge that cleaning has not yet been executed."""
 
 
 class NLQueryAgent:
@@ -147,24 +146,21 @@ class NLQueryAgent:
         """
         schema = get_table_schema(dataset_id, target_stage=target_stage)
         sample_values = get_sample_values(dataset_id, target_stage=target_stage)
-        description = describe_dataset(dataset_id)
 
         history_context = ""
         if history and len(history) > 0:
             history_context = "## Prior Conversation Context:\n"
-            for turn in history[-6:]:
+            for turn in history[-4:]:
                 role = "User" if turn.get("role") == "user" else "Assistant"
-                content = str(turn.get("content", ""))[:250]
+                content = str(turn.get("content", ""))[:200]
                 history_context += f"- **{role}**: {content}\n"
             history_context += "\n"
 
         context = f"""## Dataset Schema ({target_stage.upper()} STAGE)
 {schema}
 
-## {sample_values}
-
-## Dataset Overview
-{description}
+## Sample Values:
+{sample_values}
 """
 
         messages = [
@@ -279,7 +275,7 @@ Generate the SQL query to answer this question. Respond with ONLY JSON."""),
                 ans += " Note: This query was evaluated against the raw uncleaned dataset."
             return ans
 
-        rows_preview = results["rows"][:20]
+        rows_preview = results["rows"][:5]
         results_text = json.dumps(rows_preview, indent=2, default=str)
 
         history_context = ""
@@ -361,6 +357,113 @@ Provide a clear, human-readable answer to the user's question based on these res
 
         return followups[:4]
 
+    def is_conversational_question(self, question: str) -> bool:
+        """
+        Check if a question is conversational, conceptual, advisory, or greetings,
+        which should be answered conversationally like ChatGPT without generating SQL tables.
+        """
+        import re
+        q = question.strip().lower()
+
+        # Explicit data calculation keywords that definitely require SQL
+        sql_indicators = [
+            "how many", "count", "average", "avg", "mean", "median", "sum", "total",
+            "highest", "lowest", "maximum", "minimum", "max", "min", "top ", "first ",
+            "bottom ", "filter", "where", "group by", "order by", "sort by",
+            "null", "missing", "blank"
+        ]
+        has_sql_calc = any(re.search(r'\b' + re.escape(w) + r'\b', q) for w in sql_indicators)
+
+        # Greetings
+        greetings = [
+            "hi", "hello", "hey", "good morning", "good evening", "howdy",
+            "who are you", "what are you", "what can you do", "help", "help me"
+        ]
+        if any(q == g or q.startswith(g + " ") or q.startswith(g + "!") or q.startswith(g + ",") for g in greetings):
+            if not has_sql_calc:
+                return True
+
+        # Conversational / Conceptual / Advisory phrases
+        chat_phrases = [
+            "what do you think", "what should i", "how should i", "recommend", "suggestion",
+            "suggest", "explain what", "what is machine learning", "what is data",
+            "what does this mean", "how do i interpret", "how to interpret", "write python",
+            "write code", "how does", "why is", "can you explain", "tell me about",
+            "what is this dataset", "what does this dataset", "key columns", "what columns",
+            "which columns", "what are the columns", "about this data", "describe the data",
+            "summarize the data", "understand this data", "overview of this", "what is this data"
+        ]
+        if any(p in q for p in chat_phrases) and not has_sql_calc:
+            return True
+
+        # Dataset overview inquiries without specific column calculations
+        if ("dataset about" in q or "describe this dataset" in q or "summarize this dataset" in q) and not has_sql_calc:
+            return True
+
+        return False
+
+    async def answer_conversational(
+        self,
+        question: str,
+        dataset_id: str,
+        target_stage: str = "active",
+        history: list[dict[str, str]] | None = None,
+    ) -> str:
+        """
+        Provide a conversational, ChatGPT-like answer using dataset schema and analytics context.
+        """
+        schema = get_table_schema(dataset_id, target_stage=target_stage)
+        try:
+            meta = get_dataset_metadata(dataset_id)
+            meta_summary = (
+                f"- **Dataset File**: {meta.get('file_name', dataset_id)}\n"
+                f"- **Total Rows**: {meta.get('num_rows', 0):,}\n"
+                f"- **Total Attributes / Columns**: {meta.get('num_columns', 0)}\n"
+                f"- **Data Quality Status**: {'Contains missing values' if meta.get('has_missing') else 'Clean (no missing values)'}"
+            )
+        except Exception:
+            meta_summary = f"- **Dataset**: {dataset_id}"
+
+        history_context = ""
+        if history and len(history) > 0:
+            history_context = "## Prior Conversation History:\n"
+            for turn in history[-4:]:
+                role = "User" if turn.get("role") == "user" else "Assistant"
+                content = str(turn.get("content", ""))[:200]
+                history_context += f"- **{role}**: {content}\n"
+            history_context += "\n"
+
+        system_prompt = f"""You are DataWhale AI's expert Data Science Copilot, an AI assistant like ChatGPT specialized in data analysis, machine learning, and business intelligence.
+
+You have full context of the active dataset: `{dataset_id}`.
+
+## Dataset Profile:
+{meta_summary}
+
+## Dataset Schema & Column Types:
+{schema}
+
+## Your Persona & Guidelines:
+- Speak conversationally, warmly, smartly, and articulately—just like ChatGPT.
+- Directly and helpfully answer the user's question.
+- If asked about the dataset, explain columns, recommend models, suggest analysis angles, or provide guidance based on the schema above.
+- If asked a general question or greeting, converse naturally and offer specific analytical questions they can ask.
+- Format responses cleanly with Markdown (bold text, bullet points, headers, backticks).
+"""
+        messages = [
+            SystemMessage(content=system_prompt),
+        ]
+        if history_context:
+            messages.append(SystemMessage(content=history_context))
+        messages.append(HumanMessage(content=question))
+
+        try:
+            res = await self.llm.ainvoke(messages)
+            return res.content.strip()
+        except Exception as e:
+            logger.warning(f"Conversational answer fallback triggered: {e}")
+            return f"Hello! I am your AI Data Analyst for `{dataset_id}`. You can ask me to calculate statistics, filter data, analyze correlations, or suggest predictive models!"
+
     async def query(
         self,
         question: str,
@@ -380,6 +483,26 @@ Provide a clear, human-readable answer to the user's question based on these res
             preference=preference,
         )
         is_raw_uncleaned = (target_stage == "raw" and current_status == "raw")
+
+        # 1b. Check if conversational / conceptual / advisory
+        if self.is_conversational_question(question):
+            reply = await self.answer_conversational(
+                question=question,
+                dataset_id=dataset_id,
+                target_stage=target_stage,
+                history=history,
+            )
+            return {
+                "sql": None,
+                "explanation": "Conversational data intelligence & assistance",
+                "results": None,
+                "interpretation": reply,
+                "error": None,
+                "data_source": target_stage,
+                "data_source_label": source_label,
+                "processing_status": current_status,
+                "suggested_followups": self.generate_suggested_followups(dataset_id, question),
+            }
 
         # 2. Generate SQL for selected stage with conversation context
         sql_response = await self.generate_sql(

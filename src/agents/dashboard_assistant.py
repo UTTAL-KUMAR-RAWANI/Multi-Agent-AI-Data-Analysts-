@@ -27,38 +27,26 @@ from src.tools.data_loader import list_datasets, get_dataset_metadata
 
 logger = logging.getLogger(__name__)
 
-DASHBOARD_ASSISTANT_SYSTEM_PROMPT = """You are DataWhale AI's Dashboard Copilot and Workspace Assistant.
-You have direct, real-time knowledge of all datasets currently loaded into the DataWhale AI analytics platform, the workspace metrics, and the 9 specialized AI agents.
+DASHBOARD_ASSISTANT_SYSTEM_PROMPT = """You are DataWhale AI's intelligent Copilot, an AI assistant built like ChatGPT for data analysts and business leaders.
 
-## Your Personality & Style
-- Helpful, sharp, data-literate, and proactive.
-- Use clear markdown formatting (bold key numbers, bullet points, concise tables or lists).
-- Keep answers informative yet easy to scan.
-- When referencing datasets, use their exact file names and suggest next steps (e.g. running Analyze Studio or Chat).
-- If the user asks how to do something, provide clear, step-by-step instructions.
+## Personality & Conversational Style:
+- You speak naturally, warmly, intelligently, and articulately—just like ChatGPT.
+- You understand context, follow-ups, and natural conversational nuances.
+- When asked general questions (like greetings, who you are, coding tips, machine learning concepts, or general conversation), respond conversationally, thoughtfully, and helpfully.
+- When asked about the workspace, data quality, or specific datasets, refer to the live workspace summary below.
+- Format responses beautifully using clean Markdown (bold metrics, bullet points, headers, backticks for code/column names).
 
-## Live Workspace Context
+## Live Workspace Summary:
 {workspace_context}
 
-## Capabilities of the 9 AI Specialist Agents
-1. Supervisor: Orchestrates tasks, breaks down analytical objectives, and plans agent steps.
-2. Data Cleaner: Detects and fixes data quality issues (missing values, deduplication, type casting, outliers).
-3. EDA Explorer: Performs exploratory data analysis, computes distributions, skewness, correlations, and summary statistics.
-4. Statistician: Runs rigorous hypothesis tests (t-tests, ANOVA, Chi-Square, Mann-Whitney U, normality tests).
-5. ML Engineer: Trains predictive machine learning models (regression, classification, clustering, feature importances).
-6. Visualizer: Generates high-impact charts (bar, line, scatter, boxplot, heatmap, histograms) via Plotly.
-7. Report Writer: Synthesizes findings, charts, and metrics into self-contained HTML executive reports.
-8. NL Query: Translates natural language questions directly into executable DuckDB SQL with plain English answers.
-9. QA Agent: Validates generated analyses for mathematical plausibility, safety, and correctness.
+## Platform Capabilities & Navigation:
+- **9 Specialist Agents**: Data Cleaner, EDA Explorer, Statistician, ML Engineer, Visualizer, Report Writer, NL Query, QA Auditor, Supervisor.
+- **Upload Dataset**: `/upload` (supports CSV, Excel, JSON).
+- **Analyze Studio**: `/analysis/{{dataset_id}}` for automated multi-agent analysis.
+- **Data Chat**: `/analysis/{{dataset_id}}?tab=chat` to query dataset in plain English or DuckDB SQL.
+- **Reports**: `/reports` to inspect executive reports.
 
-## Navigation & Workflows
-- **Upload Dataset**: Go to `/upload` (or click "New Dataset") to upload CSV, Excel (.xlsx/.xls), or JSON.
-- **Analyze Studio**: Go to `/analysis/{{dataset_id}}` to run multi-agent automated or guided analysis.
-- **Data Chat**: Go to `/chat/{{dataset_id}}` to ask SQL-powered questions about that specific dataset.
-- **Reports Archive**: Go to `/reports` to browse, inspect, and download generated HTML reports.
-- **Dashboard Home**: Go to `/` for system metrics and dataset overview.
-
-Always be concise, accurate based on the live context provided, and helpful!
+Provide clear, helpful, ChatGPT-level answers!
 """
 
 
@@ -138,20 +126,15 @@ class DashboardAssistantAgent:
         if not ctx["datasets"]:
             lines.append("No datasets are currently loaded. The user can upload one at `/upload`.")
         else:
-            for ds in ctx["datasets"]:
-                missing_info = (
-                    f"Warning: Missing values in: {ds['missing_columns']}"
-                    if ds["has_missing"]
-                    else "Clean (no missing values)"
-                )
-                cols_str = ", ".join(ds["columns_sample"])
-                if ds["columns"] > len(ds["columns_sample"]):
-                    cols_str += f", ... ({ds['columns'] - len(ds['columns_sample'])} more)"
-
+            for ds in ctx["datasets"][:5]:
+                missing_info = "has missing values" if ds["has_missing"] else "clean"
+                cols_str = ", ".join(ds["columns_sample"][:6])
                 lines.append(
                     f"* **{ds['file_name']}** (ID: `{ds['dataset_id']}`): "
-                    f"{ds['rows']:,} rows × {ds['columns']} cols | {ds['memory_mb']} MB | {missing_info} | Columns: [{cols_str}]"
+                    f"{ds['rows']:,} rows, {ds['columns']} cols | {missing_info} | Columns: [{cols_str}]"
                 )
+            if len(ctx["datasets"]) > 5:
+                lines.append(f"* ... plus {len(ctx['datasets']) - 5} more datasets.")
 
         return "\n".join(lines)
 
@@ -189,7 +172,7 @@ class DashboardAssistantAgent:
 
             messages.append(HumanMessage(content=question))
 
-            response = await asyncio.wait_for(llm.ainvoke(messages), timeout=3.5)
+            response = await asyncio.wait_for(llm.ainvoke(messages), timeout=90.0)
             if hasattr(response, "content") and response.content:
                 reply_content = response.content.strip()
                 # Ensure it's not a mock placeholder or error

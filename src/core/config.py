@@ -48,6 +48,7 @@ class Settings(BaseSettings):
     openai_api_key: str = ""
     ollama_base_url: str = "http://localhost:11434"
     llamafile_base_url: str = "http://127.0.0.1:8080/v1"
+    llamafile_timeout: float = 90.0
 
     # --- Default Provider ---
     default_llm_provider: LLMProvider = LLMProvider.LLAMAFILE

@@ -101,10 +101,22 @@
     --shadow-lg: 0 4px 16px rgba(32, 41, 35, 0.08);
     --shadow-glow: 0 0 0 1px rgba(36, 91, 73, 0.18);
 
-    /* Transitions */
-    --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
+    /* ─── Motion System Design Tokens ────────────────────── */
+    --motion-duration-instant: 100ms;
+    --motion-duration-fast: 160ms;
+    --motion-duration-base: 190ms;
+    --motion-duration-slow: 240ms;
+    --motion-duration-page: 190ms;
+
+    --motion-ease-out: cubic-bezier(0.16, 1, 0.3, 1);       /* Deceleration / subtle entrance */
+    --motion-ease-in: cubic-bezier(0.7, 0, 0.84, 0);        /* Acceleration / quick exit */
+    --motion-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);     /* Smooth interactions */
+    --motion-ease-standard: cubic-bezier(0.2, 0, 0, 1);    /* Crisp editorial UI response */
+
+    /* Curated Transition Variables */
+    --transition-fast: var(--motion-duration-fast) var(--motion-ease-in-out);
+    --transition-base: var(--motion-duration-base) var(--motion-ease-in-out);
+    --transition-slow: var(--motion-duration-slow) var(--motion-ease-in-out);
 }
 
 /* ─── Reset & Base ─────────────────────────────────────── */
@@ -415,7 +427,7 @@ i[data-lucide] {
     font-size: 0.88rem;
     font-weight: 500;
     letter-spacing: 0;
-    transition: all var(--transition-fast);
+    transition: background-color var(--motion-duration-fast) var(--motion-ease-in-out), color var(--motion-duration-fast) var(--motion-ease-in-out);
     margin-bottom: 2px;
 }
 
@@ -565,6 +577,14 @@ i[data-lucide] {
     width: 100%;
     max-width: 100%;
     box-sizing: border-box;
+    animation: pageFadeIn var(--motion-duration-page) var(--motion-ease-out) both;
+    will-change: opacity, transform;
+}
+
+.content-area.page-exit {
+    opacity: 0;
+    transform: translateY(-4px);
+    transition: opacity var(--motion-duration-fast) var(--motion-ease-in), transform var(--motion-duration-fast) var(--motion-ease-in);
 }
 
 /* ─── Search Inputs ────────────────────────────────────── */
@@ -656,10 +676,18 @@ i[data-lucide] {
     letter-spacing: var(--tracking-normal);
     border: 1px solid transparent;
     cursor: pointer;
-    transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast);
+    transition: background-color var(--motion-duration-fast) var(--motion-ease-in-out),
+                border-color var(--motion-duration-fast) var(--motion-ease-in-out),
+                color var(--motion-duration-fast) var(--motion-ease-in-out),
+                box-shadow var(--motion-duration-fast) var(--motion-ease-in-out),
+                transform var(--motion-duration-fast) var(--motion-ease-in-out);
     text-decoration: none;
     white-space: nowrap;
     line-height: 1.35;
+}
+
+.btn:active:not(:disabled) {
+    transform: translateY(1px);
 }
 
 .btn svg,
@@ -1660,7 +1688,9 @@ i[data-lucide] {
     color: var(--text-secondary);
     line-height: 1.4;
     cursor: pointer;
-    transition: all var(--transition-fast);
+    transition: background-color var(--motion-duration-fast) var(--motion-ease-in-out),
+                border-color var(--motion-duration-fast) var(--motion-ease-in-out),
+                color var(--motion-duration-fast) var(--motion-ease-in-out);
 }
 
 .chip:hover {
@@ -2113,8 +2143,8 @@ i[data-lucide] {
     flex-direction: column;
     opacity: 0;
     pointer-events: none;
-    transform: translateY(12px) scale(0.98);
-    transition: opacity 0.2s ease, transform 0.2s ease;
+    transform: translateY(8px) scale(0.99);
+    transition: opacity var(--motion-duration-base) var(--motion-ease-out), transform var(--motion-duration-base) var(--motion-ease-out);
 }
 
 .dashboard-copilot-card.active {
@@ -2631,4 +2661,172 @@ i[data-lucide] {
     color: var(--text-primary, #202923);
 }
 
+/* ═══════════════════════════════════════════════════════════
+   Page Transitions & Motion Design System
+   ═══════════════════════════════════════════════════════════ */
 
+/* Multi-Page View Transition (Modern Browser Support) */
+@view-transition {
+    navigation: auto;
+}
+
+/* Suppress default full-viewport root cross-fade to prevent blank/white flashes */
+::view-transition-old(root),
+::view-transition-new(root) {
+    animation: none;
+}
+
+/* Isolate persistent app sidebar so it remains stable */
+.sidebar {
+    view-transition-name: app-sidebar;
+}
+
+::view-transition-old(app-sidebar),
+::view-transition-new(app-sidebar) {
+    animation: none;
+}
+
+/* Gentle opacity transition for top bar elements */
+.top-bar {
+    view-transition-name: app-top-bar;
+}
+
+::view-transition-old(app-top-bar) {
+    animation: topBarFadeOut 100ms var(--motion-ease-in) both;
+}
+
+::view-transition-new(app-top-bar) {
+    animation: topBarFadeIn 140ms var(--motion-ease-out) both;
+}
+
+@keyframes topBarFadeOut {
+    from { opacity: 1; }
+    to { opacity: 0.7; }
+}
+
+@keyframes topBarFadeIn {
+    from { opacity: 0.7; }
+    to { opacity: 1; }
+}
+
+/* Content Area Smooth Transition */
+.content-area {
+    view-transition-name: app-content;
+    animation: pageFadeIn 180ms var(--motion-ease-out) both;
+}
+
+::view-transition-old(app-content) {
+    animation: pageFadeOut 90ms var(--motion-ease-in) both;
+}
+
+::view-transition-new(app-content) {
+    animation: pageFadeIn 180ms var(--motion-ease-out) both;
+}
+
+@keyframes pageFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes pageFadeOut {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(-3px);
+    }
+}
+
+@keyframes elementFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(3px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ─── Skeleton Loading States ──────────────────────────── */
+.skeleton {
+    background: linear-gradient(90deg, #EBEBE3 0%, #F4F3EE 50%, #EBEBE3 100%);
+    background-size: 200% 100%;
+    animation: skeletonShimmer 1.8s ease-in-out infinite;
+    border-radius: var(--radius-xs);
+    display: inline-block;
+}
+
+.skeleton-text {
+    height: 14px;
+    margin-bottom: 6px;
+    border-radius: 4px;
+    width: 100%;
+}
+
+.skeleton-title {
+    height: 22px;
+    width: 60%;
+    margin-bottom: 12px;
+    border-radius: 4px;
+}
+
+.skeleton-card {
+    height: 140px;
+    width: 100%;
+    border-radius: var(--radius-md);
+}
+
+@keyframes skeletonShimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* ─── Smooth Progress & State Transitions ──────────────── */
+.progress-bar,
+.pipeline-progress-fill {
+    transition: width var(--motion-duration-base) var(--motion-ease-standard);
+    will-change: width;
+}
+
+.stat-card,
+.dataset-card,
+.agent-card {
+    transition: border-color var(--motion-duration-base) var(--motion-ease-in-out),
+                box-shadow var(--motion-duration-base) var(--motion-ease-in-out),
+                background-color var(--motion-duration-base) var(--motion-ease-in-out);
+}
+
+/* ─── Accessibility & Reduced Motion ───────────────────── */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+    ::view-transition-group(*),
+    ::view-transition-old(*),
+    ::view-transition-new(*) {
+        animation: none !important;
+    }
+    .content-area,
+    .tab-content.active,
+    .message,
+    .copilot-msg,
+    .dashboard-copilot-card,
+    .studio-schema-drawer,
+    .toast,
+    .report-completion-banner {
+        animation: none !important;
+        transform: none !important;
+    }
+}

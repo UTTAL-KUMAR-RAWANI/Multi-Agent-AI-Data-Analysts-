@@ -1,6 +1,6 @@
 /**
  * DataWhale AI — Core JavaScript
- * Handles sidebar toggle, toasts, and utility functions.
+ * Handles sidebar toggle, page transitions, toasts, and utility functions.
  */
 
 // ─── Sidebar Toggle ────────────────────────────────────
@@ -25,6 +25,30 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    // ─── Page Navigation Transitions ─────────────────────
+    initPageTransitions();
+});
+
+function initPageTransitions() {
+    // Respect prefers-reduced-motion
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        return;
+    }
+
+    const contentArea = document.querySelector('.content-area');
+    if (!contentArea) return;
+
+    // Ensure content area is ready and smooth
+    contentArea.style.willChange = 'opacity, transform';
+}
+
+// Restore clean state on browser back/forward (bfcache)
+window.addEventListener('pageshow', () => {
+    const contentArea = document.querySelector('.content-area');
+    if (contentArea) {
+        contentArea.style.willChange = 'auto';
+    }
 });
 
 // ─── Toast Notifications ───────────────────────────────
@@ -47,9 +71,9 @@ function showToast(message, type = 'success', duration = 4000) {
 
     setTimeout(() => {
         toast.style.opacity = '0';
-        toast.style.transform = 'translateY(10px)';
-        toast.style.transition = 'all 0.3s ease';
-        setTimeout(() => toast.remove(), 300);
+        toast.style.transform = 'translateY(6px)';
+        toast.style.transition = 'opacity 160ms cubic-bezier(0.7, 0, 0.84, 0), transform 160ms cubic-bezier(0.7, 0, 0.84, 0)';
+        setTimeout(() => toast.remove(), 170);
     }, duration);
 }
 
@@ -75,3 +99,4 @@ async function apiFetch(url, options = {}) {
         throw error;
     }
 }
+

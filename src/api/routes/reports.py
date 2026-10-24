@@ -185,25 +185,28 @@ async def answer_report_question(
     try:
         router = LLMRouter()
         llm = router.get_llm_for_agent("report_writer")
-        corr_summary = ", ".join([f"{c['feature_1']} ↔ {c['feature_2']} (r={c['pearson_r']})" for c in corrs]) or "No strong correlations"
+        corr_summary = ", ".join([f"{c['feature_1']} ↔ {c['feature_2']} (r={c['pearson_r']})" for c in corrs[:5]]) or "No strong correlations"
 
-        system_prompt = f"""You are DataWhale AI's Executive Report Analyst & Copilot.
-The user is viewing an individual, publication-ready analytics report for dataset: {dataset}.
+        system_prompt = f"""You are DataWhale AI's Executive Report Copilot, an AI assistant like ChatGPT specialized in data analysis and executive reporting.
+The user is viewing an individual analytics report for dataset: {dataset}.
 
-## Live Report Context
+## Personality & Capabilities:
+- Speak conversationally, smartly, and articulately like ChatGPT.
+- Give sharp, data-grounded answers about this specific report, its metrics, models, and findings.
+- Reference exact figures, model metrics, and discovered relationships from the context below whenever relevant.
+- Format responses beautifully using clean Markdown (bold numbers, bullet points, headers).
+
+## Live Report Context:
 - Report Title: {context.get('title', 'Executive Intelligence Report')}
 - Dataset: {dataset} ({rows} rows × {cols} columns)
 - Data Quality / Health Score: {quality}%
 - Champion Predictive Model: {model} ({metric_label}: {metric_val})
-- Executive Summary / Smart Narrative:
-{narrative[:1500]}
-- Discovered Correlations:
+- Executive Summary / Narrative:
+{narrative[:500]}
+- Top Correlations:
 {corr_summary}
 
-## Instructions
-- Give sharp, data-grounded, executive-grade answers about this specific report.
-- Reference exact figures, model metrics, and discovered relationships when relevant.
-- Use clear markdown with bold numbers and concise bullet points.
+Provide a helpful, articulate, ChatGPT-level response!
 """
         messages = [SystemMessage(content=system_prompt)]
         for h in history[-5:]:
@@ -215,7 +218,7 @@ The user is viewing an individual, publication-ready analytics report for datase
                 messages.append(AIMessage(content=c))
 
         messages.append(HumanMessage(content=message))
-        res = await asyncio.wait_for(llm.ainvoke(messages), timeout=3.5)
+        res = await asyncio.wait_for(llm.ainvoke(messages), timeout=90.0)
         if hasattr(res, "content") and res.content and len(res.content.strip()) > 15:
             return res.content.strip()
     except Exception as e:
@@ -688,6 +691,16 @@ def inject_report_copilot_widget(html_content: str, report_id: str) -> str:
                 font-size: 0.82rem;
             }}
         }}
+        @media print {{
+            .report-copilot-card,
+            .report-copilot-fab,
+            #report-copilot-card,
+            #report-copilot-fab {{
+                display: none !important;
+                visibility: hidden !important;
+                opacity: 0 !important;
+            }}
+        }}
     </style>
 
     <!-- Report Copilot Card Window -->
@@ -1054,21 +1067,73 @@ def _ensure_report_alignments(content: str, report_id: str, file_path: Path | No
     has_legacy_header = "padding: 32px clamp(18px, 4vw, 52px)" in content or "padding: 30px clamp(18px, 4vw, 52px)" in content
     has_legacy_main = "padding: 24px clamp(14px, 3vw, 38px)" in content
     has_legacy_charts = "grid-template-columns: repeat(2, minmax(0, 1fr))" in content
+    missing_print_css = "@media print" not in content or "page-break-inside" not in content
 
-    if has_legacy_header or has_legacy_main or has_legacy_charts or "minmax(min(100%, 480px)" not in content:
-        tmpl_path = Path("src/web/report_templates/full_report.html")
-        if tmpl_path.exists():
-            tmpl_text = tmpl_path.read_text(encoding="utf-8")
-            style_m = re.search(r"(<style>.*?</style>)", tmpl_text, re.DOTALL)
-            if style_m:
-                canonical_style = style_m.group(1)
-                content = re.sub(r"<style>.*?</style>", canonical_style, content, count=1, flags=re.DOTALL)
-                if file_path and file_path.exists():
-                    try:
-                        file_path.write_text(content, encoding="utf-8")
-                        logger.info(f"Auto-synced alignment styles for report {report_id}")
-                    except Exception as e:
-                        logger.warning(f"Could not persist aligned styles for {report_id}: {e}")
+    tmpl_path = Path("src/web/report_templates/full_report.html")
+    tmpl_text = tmpl_path.read_text(encoding="utf-8") if tmpl_path.exists() else ""
+
+    if tmpl_text and (has_legacy_header or has_legacy_main or has_legacy_charts or "minmax(min(100%, 480px)" not in content or missing_print_css):
+        style_m = re.search(r"(<style>.*?</style>)", tmpl_text, re.DOTALL)
+        if style_m:
+            canonical_style = style_m.group(1)
+            content = re.sub(r"<style>.*?</style>", canonical_style, content, count=1, flags=re.DOTALL)
+
+    # Ensure export button uses prepareAndPrintReport with safe fallback and single id
+    content = content.replace('id="btn-export-print" id="btn-export-print"', 'id="btn-export-print"')
+    fallback_onclick = 'onclick="if (typeof prepareAndPrintReport === \'function\') { prepareAndPrintReport(); } else { window.print(); }"'
+    content = re.sub(r'onclick="(?!(?:if\s*\(\s*typeof\s*prepareAndPrintReport))[^"]*print[^"]*"', fallback_onclick, content)
+    if 'id="btn-export-print"' not in content:
+        content = content.replace('<button class="btn-header"', '<button class="btn-header" id="btn-export-print"', 1)
+
+    # Ensure print preparation script with Plotly resizing is present
+    if "function prepareAndPrintReport" not in content and "</body>" in content:
+        print_script = """
+    <script>
+    function prepareAndPrintReport() {
+        const btn = document.getElementById('btn-export-print');
+        if (btn) {
+            btn.classList.add('loading');
+            btn.disabled = true;
+        }
+        try {
+            if (typeof Plotly !== 'undefined') {
+                document.querySelectorAll('.plotly-graph-div').forEach(el => {
+                    try { Plotly.Plots.resize(el); } catch(_) {}
+                });
+            }
+        } catch(e) {}
+        setTimeout(() => {
+            if (btn) {
+                btn.classList.remove('loading');
+                btn.disabled = false;
+            }
+            window.print();
+        }, 80);
+    }
+    window.addEventListener('beforeprint', () => {
+        if (typeof Plotly !== 'undefined') {
+            document.querySelectorAll('.plotly-graph-div').forEach(el => {
+                try { Plotly.Plots.resize(el); } catch(_) {}
+            });
+        }
+    });
+    window.addEventListener('afterprint', () => {
+        if (typeof Plotly !== 'undefined') {
+            document.querySelectorAll('.plotly-graph-div').forEach(el => {
+                try { Plotly.Plots.resize(el); } catch(_) {}
+            });
+        }
+    });
+    </script>
+        """
+        content = content.replace("</body>", f"{print_script}\n</body>")
+
+    if file_path and file_path.exists():
+        try:
+            file_path.write_text(content, encoding="utf-8")
+            logger.info(f"Auto-synced alignment and print styles for report {report_id}")
+        except Exception as e:
+            logger.warning(f"Could not persist aligned styles for {report_id}: {e}")
     return content
 
 

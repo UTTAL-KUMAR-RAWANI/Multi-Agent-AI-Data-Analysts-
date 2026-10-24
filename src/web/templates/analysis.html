@@ -159,7 +159,7 @@
         font-weight: 500;
         letter-spacing: 0.005em;
         color: var(--text-secondary);
-        transition: all 0.2s ease;
+        transition: background-color var(--motion-duration-base) var(--motion-ease-in-out), border-color var(--motion-duration-base) var(--motion-ease-in-out), color var(--motion-duration-base) var(--motion-ease-in-out), opacity var(--motion-duration-base) var(--motion-ease-in-out);
         position: relative;
     }
 
@@ -283,7 +283,7 @@
         display: flex;
         align-items: center;
         gap: 0.5rem;
-        transition: all 0.2s ease;
+        transition: color var(--motion-duration-fast) var(--motion-ease-in-out), background-color var(--motion-duration-fast) var(--motion-ease-in-out), border-color var(--motion-duration-fast) var(--motion-ease-in-out);
     }
 
     .studio-tab-btn:hover {
@@ -299,10 +299,24 @@
 
     .tab-content {
         display: none;
+        opacity: 0;
+        transform: translateY(4px);
     }
 
     .tab-content.active {
         display: block;
+        animation: tabContentIn var(--motion-duration-fast) var(--motion-ease-out) both;
+    }
+
+    @keyframes tabContentIn {
+        from {
+            opacity: 0;
+            transform: translateY(4px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
     }
 
     .chart-grid {
@@ -357,6 +371,18 @@
         padding: 0.8rem 1.5rem;
         background: #faf9f6;
         border-bottom: 1px solid var(--border);
+        animation: drawerIn var(--motion-duration-fast) var(--motion-ease-out) both;
+    }
+
+    @keyframes drawerIn {
+        from {
+            opacity: 0;
+            transform: translateY(-4px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
     }
 
     .studio-schema-chips {
@@ -1440,6 +1466,43 @@
         return escapeStudioHtml(String(value));
     }
 
+    function formatStudioMarkdown(text) {
+        if (!text) return '';
+        let escaped = text
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+
+        // Pre/code blocks
+        escaped = escaped.replace(/```([a-z]*)\n?([\s\S]*?)```/g, '<pre><code>$2</code></pre>');
+        // Inline code
+        escaped = escaped.replace(/`([^`]+)`/g, '<code>$1</code>');
+        // Headings
+        escaped = escaped.replace(/^#### (.*$)/gim, '<h5 style="margin:6px 0; font-weight:700;">$1</h5>');
+        escaped = escaped.replace(/^### (.*$)/gim, '<h4 style="margin:8px 0 4px; font-weight:700;">$1</h4>');
+        escaped = escaped.replace(/^## (.*$)/gim, '<h3 style="margin:10px 0 6px; font-weight:700;">$1</h3>');
+        // Bold & Italics
+        escaped = escaped.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+        escaped = escaped.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+        // Markdown Links
+        escaped = escaped.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+        // List items
+        escaped = escaped.replace(/^\s*[-*]\s+(.*$)/gim, '<li>$1</li>');
+        escaped = escaped.replace(/(<li>.*<\/li>)/gms, '<ul style="margin: 6px 0 8px 18px; padding-left: 0;">$1</ul>');
+        escaped = escaped.replace(/<\/ul>\s*<ul[^>]*>/g, '');
+
+        // Paragraphs
+        const blocks = escaped.split(/\n{2,}/);
+        return blocks.map(b => {
+            const trimmed = b.trim();
+            if (!trimmed) return '';
+            if (trimmed.startsWith('<h') || trimmed.startsWith('<ul') || trimmed.startsWith('<pre')) {
+                return trimmed;
+            }
+            return `<p style="margin-bottom: 0.5rem;">${trimmed.replace(/\n/g, '<br>')}</p>`;
+        }).join('');
+    }
+
     function formatStudioResults(data) {
         let html = '';
 
@@ -1454,9 +1517,9 @@
             `;
         }
 
-        // Interpretation / answer
+        // Interpretation / answer rendered as rich markdown
         const interp = data.interpretation || (data.error ? data.error : 'Query executed successfully.');
-        html += `<div style="font-size: 0.95rem; line-height: 1.6; margin-bottom: 0.6rem;">${escapeStudioHtml(interp).replace(/\n/g, '<br>')}</div>`;
+        html += `<div style="font-size: 0.95rem; line-height: 1.6; margin-bottom: 0.6rem;">${formatStudioMarkdown(interp)}</div>`;
 
         // Collapsible SQL query
         if (data.sql) {

@@ -130,6 +130,19 @@
             max-width: 1500px;
             margin: 0 auto;
             padding: 28px clamp(18px, 3vw, 40px) 48px;
+            animation: reportContentIn 190ms cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+
+        @keyframes reportContentIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after, main {
+                animation: none !important;
+                transition: none !important;
+            }
         }
 
         /* KPIs Ribbon Grid */
@@ -840,6 +853,271 @@
                 font-size: 0.82rem;
             }
         }
+
+        /* ═══════════════════════════════════════════════════════════
+           High-Fidelity PDF & Print Export Styles (A4 Portrait)
+           ═══════════════════════════════════════════════════════════ */
+        @page {
+            size: A4 portrait;
+            margin: 12mm 14mm 14mm 14mm;
+        }
+
+        @media print {
+            /* 1. Global Reset & Print Rendering */
+            *, *::before, *::after {
+                box-shadow: none !important;
+                text-shadow: none !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            html, body {
+                background: #ffffff !important;
+                color: #1a202c !important;
+                font-size: 10pt !important;
+                line-height: 1.45 !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                width: 100% !important;
+                min-width: 0 !important;
+            }
+
+            /* 2. Hide Unwanted Application Controls & Floating Widgets */
+            .header-actions,
+            .btn-header,
+            .table-tools,
+            .btn-export,
+            #searchBox,
+            #quickFilter,
+            .report-copilot-card,
+            .report-copilot-fab,
+            #report-copilot-card,
+            #report-copilot-fab,
+            .modebar,
+            .js-plotly-plot .plotly .modebar,
+            .modebar-container {
+                display: none !important;
+                visibility: hidden !important;
+                opacity: 0 !important;
+            }
+
+            /* 3. Executive Header - Print Appearance */
+            header {
+                background: #1B2620 !important;
+                color: #ffffff !important;
+                padding: 16px 20px !important;
+                margin-bottom: 16px !important;
+                border-radius: 8px !important;
+                page-break-after: avoid;
+                break-after: avoid;
+            }
+
+            .header-inner {
+                padding: 0 !important;
+                max-width: 100% !important;
+            }
+
+            .eyebrow {
+                color: #D5A451 !important;
+                font-size: 8.5pt !important;
+            }
+
+            h1 {
+                font-size: 20pt !important;
+                margin: 4px 0 6px 0 !important;
+                color: #ffffff !important;
+            }
+
+            header p {
+                font-size: 9.5pt !important;
+                color: #e2e8f0 !important;
+                max-width: 100% !important;
+                line-height: 1.4 !important;
+            }
+
+            /* 4. Canvas Main Layout */
+            main {
+                max-width: 100% !important;
+                width: 100% !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                animation: none !important;
+            }
+
+            /* 5. Compact KPI Ribbon (4 cards per row, fits cleanly at top) */
+            .kpis {
+                display: grid !important;
+                grid-template-columns: repeat(4, 1fr) !important;
+                gap: 8px !important;
+                margin-bottom: 18px !important;
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+
+            .kpi {
+                padding: 10px 12px !important;
+                border: 1px solid #d4d4cc !important;
+                border-radius: 8px !important;
+                background: #faf9f6 !important;
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+
+            .kpi .label {
+                font-size: 7.5pt !important;
+                color: #555e57 !important;
+            }
+
+            .kpi .value {
+                font-size: 15pt !important;
+                margin-top: 4px !important;
+                color: #1a202c !important;
+            }
+
+            .kpi .sub {
+                font-size: 8pt !important;
+                margin-top: 2px !important;
+                color: #68736b !important;
+            }
+
+            /* 6. Section Titles */
+            .section-title {
+                font-size: 13pt !important;
+                margin: 20px 0 10px 0 !important;
+                page-break-after: avoid;
+                break-after: avoid;
+                color: #1a202c !important;
+            }
+
+            /* 7. Charts & Panels (Prevent Slicing Across Pages) */
+            .charts {
+                display: block !important;
+                margin-bottom: 18px !important;
+            }
+
+            .panel {
+                border: 1px solid #d4d4cc !important;
+                border-radius: 8px !important;
+                padding: 14px 16px !important;
+                margin-bottom: 16px !important;
+                background: #ffffff !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+                width: 100% !important;
+                box-sizing: border-box !important;
+            }
+
+            .panel h2 {
+                font-size: 11pt !important;
+                margin-bottom: 10px !important;
+                page-break-after: avoid;
+                break-after: avoid;
+                color: #1a202c !important;
+            }
+
+            .plotly-graph-div {
+                width: 100% !important;
+                height: 340px !important;
+                max-height: 340px !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+
+            .plotly-graph-div svg {
+                max-width: 100% !important;
+            }
+
+            /* 8. Standout Insights (Row of 3 cards, cleanly bound) */
+            .insights {
+                display: grid !important;
+                grid-template-columns: repeat(3, 1fr) !important;
+                gap: 10px !important;
+                margin-bottom: 12px !important;
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+
+            .insight {
+                padding: 12px 14px !important;
+                border: 1px solid #d4d4cc !important;
+                border-left-width: 4px !important;
+                border-radius: 8px !important;
+                page-break-inside: avoid;
+                break-inside: avoid;
+                background: #ffffff !important;
+            }
+
+            .insight h3 {
+                font-size: 10pt !important;
+                margin-bottom: 6px !important;
+            }
+
+            .insight p {
+                font-size: 8.5pt !important;
+                line-height: 1.4 !important;
+            }
+
+            .note {
+                font-size: 8pt !important;
+                margin: 10px 0 16px 0 !important;
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+
+            /* 9. Data Explorer Table (Flow Naturally, No Cut-Off Scrollbars) */
+            .table-panel {
+                border: 1px solid #d4d4cc !important;
+                border-radius: 8px !important;
+                padding: 14px !important;
+                page-break-inside: auto !important;
+                break-inside: auto !important;
+            }
+
+            .table-wrap {
+                overflow: visible !important;
+                max-height: none !important;
+                border: none !important;
+            }
+
+            table {
+                width: 100% !important;
+                font-size: 8pt !important;
+                white-space: normal !important;
+                border-collapse: collapse !important;
+            }
+
+            thead {
+                display: table-header-group !important; /* Repeats table headers on each printed page */
+            }
+
+            tr {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+
+            th, td {
+                padding: 5px 6px !important;
+                border: 1px solid #e2e8f0 !important;
+                word-break: break-word !important;
+            }
+
+            th {
+                background: #f1f5f9 !important;
+                color: #334155 !important;
+                font-size: 7.5pt !important;
+            }
+
+            /* 10. Footer */
+            .footer {
+                margin-top: 16px !important;
+                padding-top: 10px !important;
+                border-top: 1px solid #d4d4cc !important;
+                font-size: 7.5pt !important;
+                color: #64748b !important;
+                page-break-before: auto;
+                break-before: auto;
+            }
+        }
     </style>
 </head>
 <body>
@@ -852,7 +1130,7 @@
             <p>{{ description or (executive_summary[:380] ~ "...") if (executive_summary and executive_summary|length > 380) else (executive_summary or "A clean, decision-support executive view of observations, model predictions, distribution metrics, and data features.") }}</p>
         </div>
         <div class="header-actions">
-            <button class="btn-header" onclick="window.print()">
+            <button class="btn-header" id="btn-export-print" onclick="if (typeof prepareAndPrintReport === 'function') { prepareAndPrintReport(); } else { window.print(); }">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><path d="M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6"></path><rect x="6" y="14" width="12" height="8" rx="1"></rect></svg>
                 <span>Export / Print</span>
             </button>
@@ -995,6 +1273,51 @@
             });
         });
     }
+
+    function prepareAndPrintReport() {
+        const btn = document.getElementById('btn-export-print');
+        if (btn) {
+            btn.classList.add('loading');
+            btn.disabled = true;
+        }
+
+        // Resize all Plotly charts for printable dimensions
+        try {
+            if (typeof Plotly !== 'undefined') {
+                document.querySelectorAll('.plotly-graph-div').forEach(el => {
+                    try { Plotly.Plots.resize(el); } catch(_) {}
+                });
+            }
+        } catch(e) {}
+
+        setTimeout(() => {
+            if (btn) {
+                btn.classList.remove('loading');
+                btn.disabled = false;
+            }
+            window.print();
+        }, 80);
+    }
+
+    window.addEventListener('beforeprint', () => {
+        document.querySelectorAll('.plotly-graph-div').forEach(el => {
+            if (typeof Plotly !== 'undefined' && el && el.data) {
+                try {
+                    Plotly.Plots.resize(el);
+                } catch(e) {}
+            }
+        });
+    });
+
+    window.addEventListener('afterprint', () => {
+        document.querySelectorAll('.plotly-graph-div').forEach(el => {
+            if (typeof Plotly !== 'undefined' && el && el.data) {
+                try {
+                    Plotly.Plots.resize(el);
+                } catch(e) {}
+            }
+        });
+    });
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', initPlotlyCharts);

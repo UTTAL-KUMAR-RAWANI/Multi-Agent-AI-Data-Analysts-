@@ -43,9 +43,9 @@ class DatasetResponse(BaseModel):
 class QueryResponse(BaseModel):
     """Response from a natural language query with verified data source audit."""
     question: str
-    sql: str
-    explanation: str
-    interpretation: str
+    sql: str | None = None
+    explanation: str | None = None
+    interpretation: str = ""
     results: dict[str, Any] | None = None
     error: str | None = None
     data_source: str | None = "raw"

@@ -154,17 +154,56 @@
         if (el) el.remove();
     }
 
-    function formatResults(data) {
-        let html = `<p>${data.interpretation}</p>`;
+    function formatChatMarkdown(text) {
+        if (!text) return '';
+        let escaped = text
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
 
-        // Show SQL in a collapsible
-        html += `
-            <details class="sql-details">
-                <summary><i data-lucide="code-2"></i> View SQL Query</summary>
-                <pre><code>${escapeHtml(data.sql)}</code></pre>
-                ${data.explanation ? `<p class="sql-explanation">${data.explanation}</p>` : ''}
-            </details>
-        `;
+        // Pre/code blocks
+        escaped = escaped.replace(/```([a-z]*)\n?([\s\S]*?)```/g, '<pre><code>$2</code></pre>');
+        // Inline code
+        escaped = escaped.replace(/`([^`]+)`/g, '<code>$1</code>');
+        // Headings
+        escaped = escaped.replace(/^#### (.*$)/gim, '<h5 style="margin:6px 0; font-weight:700;">$1</h5>');
+        escaped = escaped.replace(/^### (.*$)/gim, '<h4 style="margin:8px 0 4px; font-weight:700;">$1</h4>');
+        escaped = escaped.replace(/^## (.*$)/gim, '<h3 style="margin:10px 0 6px; font-weight:700;">$1</h3>');
+        // Bold & Italics
+        escaped = escaped.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+        escaped = escaped.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+        // Markdown Links
+        escaped = escaped.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+        // List items
+        escaped = escaped.replace(/^\s*[-*]\s+(.*$)/gim, '<li>$1</li>');
+        escaped = escaped.replace(/(<li>.*<\/li>)/gms, '<ul style="margin: 6px 0 8px 18px; padding-left: 0;">$1</ul>');
+        escaped = escaped.replace(/<\/ul>\s*<ul[^>]*>/g, '');
+
+        // Paragraphs
+        const blocks = escaped.split(/\n{2,}/);
+        return blocks.map(b => {
+            const trimmed = b.trim();
+            if (!trimmed) return '';
+            if (trimmed.startsWith('<h') || trimmed.startsWith('<ul') || trimmed.startsWith('<pre')) {
+                return trimmed;
+            }
+            return `<p style="margin-bottom: 0.5rem; line-height: 1.6;">${trimmed.replace(/\n/g, '<br>')}</p>`;
+        }).join('');
+    }
+
+    function formatResults(data) {
+        let html = `<div class="chat-markdown-body">${formatChatMarkdown(data.interpretation)}</div>`;
+
+        // Show SQL in a collapsible if present
+        if (data.sql) {
+            html += `
+                <details class="sql-details">
+                    <summary><i data-lucide="code-2"></i> View SQL Query</summary>
+                    <pre><code>${escapeHtml(data.sql)}</code></pre>
+                    ${data.explanation ? `<p class="sql-explanation">${data.explanation}</p>` : ''}
+                </details>
+            `;
+        }
 
         // Show result table if there are rows
         if (data.results && data.results.rows && data.results.rows.length > 0) {
