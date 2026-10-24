@@ -567,6 +567,73 @@ i[data-lucide] {
     box-sizing: border-box;
 }
 
+/* ─── Search Inputs ────────────────────────────────────── */
+.search-box-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
+.search-input {
+    width: 100%;
+    padding: 8px 32px 8px 36px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: var(--font-sans);
+    font-size: 0.85rem;
+    color: var(--text-primary);
+    outline: none;
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.search-input::placeholder {
+    color: var(--text-muted);
+}
+
+.search-input:focus {
+    border-color: var(--primary-action);
+    box-shadow: 0 0 0 2px var(--soft-green-surface);
+}
+
+.search-box-wrapper .search-icon {
+    position: absolute;
+    left: 11px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 15px;
+    height: 15px;
+    color: var(--text-secondary);
+    pointer-events: none;
+}
+
+.search-box-wrapper .search-clear-btn {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-muted);
+    padding: 3px;
+    border-radius: var(--radius-xs);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    transition: color var(--transition-fast);
+}
+
+.search-box-wrapper .search-clear-btn:hover {
+    color: var(--text-primary);
+}
+
+.search-box-wrapper .search-clear-btn svg,
+.search-box-wrapper .search-clear-btn i {
+    width: 13px;
+    height: 13px;
+}
+
 /* ─── Solid Content Surfaces (Formerly Glass Card) ──────── */
 .glass-card {
     background: var(--surface);
@@ -2490,6 +2557,78 @@ i[data-lucide] {
         padding: 8px 14px;
         font-size: 0.8rem;
     }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Search Box Utility (Dashboard & Reports Filter)
+   ═══════════════════════════════════════════════════════════ */
+.search-box-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    width: 100%;
+}
+
+.search-icon {
+    position: absolute;
+    left: 11px;
+    width: 16px !important;
+    height: 16px !important;
+    color: var(--text-tertiary, #8A928B);
+    pointer-events: none;
+    z-index: 2;
+}
+
+.search-input {
+    width: 100%;
+    padding: 0.52rem 2.2rem 0.52rem 2.35rem;
+    background: var(--surface-card, #FFFFFF);
+    border: 1px solid var(--border-subtle, #E4E4DC);
+    border-radius: var(--radius-sm, 6px);
+    font-family: var(--font-sans);
+    font-size: 0.85rem;
+    color: var(--text-primary, #202923);
+    outline: none;
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background-color var(--transition-fast);
+}
+
+.search-input::placeholder {
+    color: var(--text-muted, #727A73);
+    font-size: 0.83rem;
+}
+
+.search-input:focus {
+    border-color: var(--primary-action, #245B49);
+    background: #FFFFFF;
+    box-shadow: 0 0 0 3px rgba(36, 91, 73, 0.12);
+}
+
+.search-clear-btn {
+    position: absolute;
+    right: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 50%;
+    color: var(--text-tertiary, #8A928B);
+    cursor: pointer;
+    transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.search-clear-btn svg,
+.search-clear-btn i[data-lucide] {
+    width: 13px !important;
+    height: 13px !important;
+}
+
+.search-clear-btn:hover {
+    background: var(--surface-secondary, #EFECE6);
+    color: var(--text-primary, #202923);
 }
 
 

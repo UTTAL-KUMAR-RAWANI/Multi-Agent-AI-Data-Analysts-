@@ -268,12 +268,13 @@ async def stream_multi_agent_pipeline(
 
             # ── 9. Final Complete & STOP ──
             from src.tools.data_loader import set_dataset_stage, get_dataset
+            from src.tools.analysis_store import save_analysis_result
             try:
                 set_dataset_stage(dataset_id, "validated", get_dataset(dataset_id))
             except Exception as stg_err:
                 logger.warning(f"Could not set validated stage: {stg_err}")
 
-            yield format_sse({
+            complete_payload = {
                 "event": "pipeline_complete",
                 "status": "stopped",
                 "success": True,
@@ -290,7 +291,14 @@ async def stream_multi_agent_pipeline(
                 "qa_feedback": state.get("qa_feedback", []),
                 "report_url": report_res.get("report_url"),
                 "report_id": report_res.get("report_id"),
-            })
+            }
+
+            try:
+                save_analysis_result(dataset_id, complete_payload)
+            except Exception as save_err:
+                logger.warning(f"Failed to save analysis result: {save_err}")
+
+            yield format_sse(complete_payload)
         except Exception as err:
             logger.error(f"Stream pipeline failed: {err}", exc_info=True)
             yield format_sse({
@@ -309,6 +317,24 @@ async def stream_multi_agent_pipeline(
             "X-Accel-Buffering": "no",
         },
     )
+
+
+@router.get("/status/{dataset_id}")
+async def get_analysis_status(dataset_id: str):
+    """Get persisted analysis result and report for a dataset if available."""
+    from src.tools.analysis_store import get_existing_analysis
+    analysis = get_existing_analysis(dataset_id)
+    if not analysis:
+        return {"has_analysis": False, "has_completed_analysis": False, "dataset_id": dataset_id}
+    return {
+        "has_analysis": True,
+        "has_completed_analysis": True,
+        "dataset_id": dataset_id,
+        "report_id": analysis.get("report_id"),
+        "report_url": analysis.get("report_url"),
+        "download_url": analysis.get("download_url"),
+        "data": analysis
+    }
 
 
 @router.post("/run")
@@ -342,6 +368,13 @@ async def run_full_pipeline(req: MultiAgentAnalysisRequest):
             "report_url": report_res.get("report_url"),
             "report_id": report_res.get("report_id"),
         }
+
+        from src.tools.analysis_store import save_analysis_result
+        try:
+            save_analysis_result(req.dataset_id, result)
+        except Exception as save_err:
+            logger.warning(f"Failed to persist run analysis result: {save_err}")
+
         return jsonable_encoder(result)
     except Exception as e:
         logger.error(f"Multi-agent execution error: {e}", exc_info=True)

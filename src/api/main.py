@@ -108,6 +108,7 @@ async def chat_page(request: Request, dataset_id: str):
 async def analysis_page(request: Request, dataset_id: str):
     """Multi-Agent Studio page for in-depth analysis and automated modeling."""
     from src.tools.data_loader import get_dataset_metadata, get_dataset_stage, get_cleaning_audit
+    from src.tools.analysis_store import get_existing_analysis
     from src.core.exceptions import DatasetNotFoundError
 
     try:
@@ -125,6 +126,8 @@ async def analysis_page(request: Request, dataset_id: str):
             status_code=404,
         )
 
+    existing_analysis = get_existing_analysis(dataset_id)
+
     return templates.TemplateResponse(
         request=request,
         name="analysis.html",
@@ -133,6 +136,7 @@ async def analysis_page(request: Request, dataset_id: str):
             "metadata": metadata,
             "stage": stage,
             "cleaning_audit": cleaning_audit,
+            "existing_analysis": existing_analysis,
             "active_page": "analysis",
         },
     )

@@ -511,8 +511,13 @@
             </div>
             <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
                 <button class="btn btn-primary" id="btn-run-full" onclick="runPipeline('full')">
+                    {% if existing_analysis %}
+                    <i data-lucide="check-circle-2"></i>
+                    <span>Re-run Analysis</span>
+                    {% else %}
                     <i data-lucide="zap"></i>
                     <span>Run Full Multi-Agent Pipeline</span>
+                    {% endif %}
                 </button>
                 <button class="btn btn-secondary" id="btn-hero-chat" onclick="openChatTab()">
                     <i data-lucide="message-square-text"></i>
@@ -523,80 +528,80 @@
 
         <!-- Live Progress Track -->
         <div class="pipeline-progress-track">
-            <div class="pipeline-progress-fill" id="pipeline-progress-bar"></div>
+            <div class="pipeline-progress-fill" id="pipeline-progress-bar" style="width: {{ '100%' if existing_analysis else '0%' }};"></div>
         </div>
 
         <!-- Live Sequence Status Line -->
         <div class="pipeline-status-banner" id="pipeline-status-banner">
             <div class="status-banner-left">
-                <div class="status-pulse-dot" id="status-pulse-dot"></div>
-                <strong id="live-step-badge" style="font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary);">Ready</strong>
-                <span id="live-status-text" style="color: var(--text-secondary);">Click "Run Full Multi-Agent Pipeline" to begin autonomous execution across all specialist agents.</span>
+                <div class="status-pulse-dot {{ 'stopped' if existing_analysis else '' }}" id="status-pulse-dot"></div>
+                <strong id="live-step-badge" style="font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.05em; color: {{ 'var(--success)' if existing_analysis else 'var(--text-secondary)' }};">{{ 'Completed' if existing_analysis else 'Ready' }}</strong>
+                <span id="live-status-text" style="color: var(--text-secondary);">{{ 'Multi-agent analysis process stopped successfully. All tasks complete.' if existing_analysis else 'Click "Run Full Multi-Agent Pipeline" to begin autonomous execution across all specialist agents.' }}</span>
             </div>
-            <div id="live-time-status" style="font-size: 0.82rem; color: var(--text-muted); font-family: var(--font-mono, monospace);">0/8 Steps</div>
+            <div id="live-time-status" style="font-size: 0.82rem; color: var(--text-muted); font-family: var(--font-mono, monospace);">{{ '8/8 Finished' if existing_analysis else '0/8 Steps' }}</div>
         </div>
 
         <!-- Pipeline Execution Flow Status (Sequential Chips) -->
         <div class="agent-pipeline-bar" id="pipeline-status-bar">
-            <div class="agent-chip pending" id="chip-supervisor">
+            <div class="agent-chip {{ 'completed' if existing_analysis else 'pending' }}" id="chip-supervisor">
                 <i data-lucide="network"></i>
                 <span>1. Supervisor</span>
-                <span class="chip-tag" id="tag-supervisor">Pending</span>
+                <span class="chip-tag" id="tag-supervisor">{{ 'Completed' if existing_analysis else 'Pending' }}</span>
             </div>
             <div class="pipeline-connector"><i data-lucide="chevron-right"></i></div>
 
-            <div class="agent-chip pending" id="chip-cleaner">
+            <div class="agent-chip {{ 'completed' if existing_analysis else 'pending' }}" id="chip-cleaner">
                 <i data-lucide="sparkles"></i>
                 <span>2. Cleaner</span>
-                <span class="chip-tag" id="tag-cleaner">Pending</span>
+                <span class="chip-tag" id="tag-cleaner">{{ 'Completed' if existing_analysis else 'Pending' }}</span>
             </div>
             <div class="pipeline-connector"><i data-lucide="chevron-right"></i></div>
 
-            <div class="agent-chip pending" id="chip-eda">
+            <div class="agent-chip {{ 'completed' if existing_analysis else 'pending' }}" id="chip-eda">
                 <i data-lucide="scan-search"></i>
                 <span>3. EDA Explorer</span>
-                <span class="chip-tag" id="tag-eda">Pending</span>
+                <span class="chip-tag" id="tag-eda">{{ 'Completed' if existing_analysis else 'Pending' }}</span>
             </div>
             <div class="pipeline-connector"><i data-lucide="chevron-right"></i></div>
 
-            <div class="agent-chip pending" id="chip-stats">
+            <div class="agent-chip {{ 'completed' if existing_analysis else 'pending' }}" id="chip-stats">
                 <i data-lucide="trending-up"></i>
                 <span>4. Statistician</span>
-                <span class="chip-tag" id="tag-stats">Pending</span>
+                <span class="chip-tag" id="tag-stats">{{ 'Completed' if existing_analysis else 'Pending' }}</span>
             </div>
             <div class="pipeline-connector"><i data-lucide="chevron-right"></i></div>
 
-            <div class="agent-chip pending" id="chip-ml">
+            <div class="agent-chip {{ 'completed' if existing_analysis else 'pending' }}" id="chip-ml">
                 <i data-lucide="cpu"></i>
                 <span>5. ML Engineer</span>
-                <span class="chip-tag" id="tag-ml">Pending</span>
+                <span class="chip-tag" id="tag-ml">{{ 'Completed' if existing_analysis else 'Pending' }}</span>
             </div>
             <div class="pipeline-connector"><i data-lucide="chevron-right"></i></div>
 
-            <div class="agent-chip pending" id="chip-viz">
+            <div class="agent-chip {{ 'completed' if existing_analysis else 'pending' }}" id="chip-viz">
                 <i data-lucide="bar-chart-3"></i>
                 <span>6. Visualizer</span>
-                <span class="chip-tag" id="tag-viz">Pending</span>
+                <span class="chip-tag" id="tag-viz">{{ 'Completed' if existing_analysis else 'Pending' }}</span>
             </div>
             <div class="pipeline-connector"><i data-lucide="chevron-right"></i></div>
 
-            <div class="agent-chip pending" id="chip-qa">
+            <div class="agent-chip {{ 'completed' if existing_analysis else 'pending' }}" id="chip-qa">
                 <i data-lucide="shield-check"></i>
                 <span>7. QA Agent</span>
-                <span class="chip-tag" id="tag-qa">Pending</span>
+                <span class="chip-tag" id="tag-qa">{{ 'Completed' if existing_analysis else 'Pending' }}</span>
             </div>
             <div class="pipeline-connector"><i data-lucide="chevron-right"></i></div>
 
-            <div class="agent-chip pending" id="chip-report">
+            <div class="agent-chip {{ 'completed' if existing_analysis else 'pending' }}" id="chip-report">
                 <i data-lucide="file-text"></i>
                 <span>8. Report</span>
-                <span class="chip-tag" id="tag-report">Pending</span>
+                <span class="chip-tag" id="tag-report">{{ 'Completed' if existing_analysis else 'Pending' }}</span>
             </div>
         </div>
     </div>
 
     <!-- REPORT READY COMPLETION BANNER (Appears immediately when report is created & process stops) -->
-    <div id="report-ready-banner" class="report-completion-banner" style="display: none;">
+    <div id="report-ready-banner" class="report-completion-banner" style="display: {{ 'flex' if existing_analysis and existing_analysis.report_url else 'none' }};">
         <div class="report-banner-left">
             <div class="report-badge-icon"><i data-lucide="check-circle-2"></i></div>
             <div>
@@ -605,16 +610,20 @@
                     <span class="badge badge-success"><i data-lucide="check"></i> Process Stopped</span>
                 </div>
                 <p style="font-size: 0.88rem; color: var(--text-secondary); margin-top: 0.25rem;" id="report-banner-meta">
+                    {% if existing_analysis and existing_analysis.report_url %}
+                    Full executive report ready at: {{ existing_analysis.report_url }}. Analysis process finalized and stopped.
+                    {% else %}
                     All specialist agent workflows have completed and stopped. Full intelligence dossier published.
+                    {% endif %}
                 </p>
             </div>
         </div>
         <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
-            <a id="btn-banner-view-report" href="#" target="_blank" class="btn btn-primary">
+            <a id="btn-banner-view-report" href="{{ existing_analysis.report_url if existing_analysis else '#' }}" target="_blank" class="btn btn-primary">
                 <i data-lucide="external-link"></i>
                 <span>Open Full Executive Report</span>
             </a>
-            <a id="btn-banner-download-report" href="#" class="btn btn-secondary">
+            <a id="btn-banner-download-report" href="{{ existing_analysis.download_url if existing_analysis else '#' }}" class="btn btn-secondary">
                 <i data-lucide="download"></i>
                 <span>Download Report</span>
             </a>
@@ -652,13 +661,11 @@
         <div class="glass-card" style="padding: 1.8rem;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
                 <h3 style="font-size: 1.25rem; font-weight: 700;">Executive Synthesis & Actionable Takeaways</h3>
-                <a id="btn-view-report-link" href="#" target="_blank" class="btn btn-secondary btn-sm" style="display: none;">
+                <a id="btn-view-report-link" href="{{ existing_analysis.report_url if existing_analysis else '#' }}" target="_blank" class="btn btn-secondary btn-sm" style="display: {{ 'inline-flex' if existing_analysis and existing_analysis.report_url else 'none' }};">
                     <i data-lucide="external-link"></i> Open Full Report
                 </a>
             </div>
-            <div id="synthesis-text" style="color: var(--text-primary); font-size: 1rem; line-height: 1.7; white-space: pre-wrap;">
-                Click "Run Full Multi-Agent Pipeline" above to autonomously analyze this dataset across all agents in sequence.
-            </div>
+            <div id="synthesis-text" style="color: var(--text-primary); font-size: 1rem; line-height: 1.7; white-space: pre-wrap;">{{ existing_analysis.executive_summary if (existing_analysis and existing_analysis.executive_summary) else 'Click "Run Full Multi-Agent Pipeline" above to autonomously analyze this dataset across all agents in sequence.' }}</div>
         </div>
     </div>
 
@@ -1052,8 +1059,10 @@
         lucide.createIcons();
     }
 
-    function renderAnalysisResults(res) {
-        showToast('Report created & analysis process stopped successfully!', 'success');
+    function renderAnalysisResults(res, isInitialLoad = false) {
+        if (!isInitialLoad) {
+            showToast('Report created & analysis process stopped successfully!', 'success');
+        }
 
         // Show Report Completion Banner
         const reportBanner = document.getElementById('report-ready-banner');
@@ -1062,8 +1071,8 @@
             const vLink = document.getElementById('btn-banner-view-report');
             if (vLink) vLink.href = res.report_url;
             const dLink = document.getElementById('btn-banner-download-report');
-            if (dLink && res.report_id) {
-                dLink.href = `/reports/download/${res.report_id}`;
+            if (dLink) {
+                dLink.href = res.download_url || (res.report_id ? `/reports/download/${res.report_id}` : res.report_url);
             }
             const bannerMeta = document.getElementById('report-banner-meta');
             if (bannerMeta) {
@@ -1073,8 +1082,8 @@
 
         // 1. Executive Summary
         const synthText = document.getElementById('synthesis-text');
-        if (synthText) {
-            synthText.innerText = res.executive_summary || "Analysis completed.";
+        if (synthText && res.executive_summary) {
+            synthText.innerText = res.executive_summary;
         }
         if (res.report_url) {
             const rLink = document.getElementById('btn-view-report-link');
@@ -1124,6 +1133,25 @@
                         }
                     }, 50);
                 });
+            }
+        } else if (res.report_url) {
+            const cContainer = document.getElementById('charts-container');
+            if (cContainer) {
+                cContainer.innerHTML = `
+                    <div class="glass-card" style="grid-column: 1 / -1; padding: 2.5rem; text-align: center;">
+                        <div style="width: 48px; height: 48px; border-radius: 50%; background: var(--surface-secondary); display: inline-flex; align-items: center; justify-content: center; margin-bottom: 1rem; color: var(--accent);">
+                            <i data-lucide="bar-chart-3" style="width: 24px; height: 24px;"></i>
+                        </div>
+                        <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 0.5rem;">Visual Analytics Generated</h3>
+                        <p style="color: var(--text-secondary); max-width: 500px; margin: 0 auto 1.25rem;">
+                            Interactive Plotly analytics and distribution curves were compiled into the full executive dossier.
+                        </p>
+                        <a href="${res.report_url}" target="_blank" class="btn btn-primary btn-sm">
+                            <i data-lucide="external-link"></i>
+                            <span>View All Visuals in Full Report</span>
+                        </a>
+                    </div>
+                `;
             }
         }
 
@@ -1570,6 +1598,12 @@
         // Load dynamic suggestions and dataset stage status
         loadChatStatus();
         loadChatSuggestions();
+
+        // Check if existing completed analysis is available and hydrate studio
+        const EXISTING_ANALYSIS = {{ existing_analysis | tojson if existing_analysis else 'null' }};
+        if (EXISTING_ANALYSIS) {
+            renderAnalysisResults(EXISTING_ANALYSIS, true);
+        }
 
         // Check if navigated with ?tab=chat or #chat
         const urlParams = new URLSearchParams(window.location.search);

@@ -56,15 +56,37 @@
 
     {% if datasets %}
 
-    <!-- Datasets Grid -->
-    <div class="section-header">
-        <h2>Your Datasets</h2>
-        <span class="badge">{{ datasets | length }}</span>
+    <!-- Datasets Header & Search -->
+    <div class="section-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <h2>Your Datasets</h2>
+            <span class="badge" id="datasets-count-badge">{{ datasets | length }}</span>
+        </div>
+        <div class="search-box-wrapper" style="width: 100%; max-width: 340px;">
+            <i data-lucide="search" class="search-icon"></i>
+            <input 
+                type="text" 
+                id="dataset-search-input" 
+                class="search-input" 
+                placeholder="Search datasets by name or size..." 
+                autocomplete="off"
+            >
+            <button 
+                type="button" 
+                id="btn-clear-dataset-search" 
+                class="search-clear-btn" 
+                title="Clear search" 
+                aria-label="Clear search"
+                style="display: none;"
+            >
+                <i data-lucide="x"></i>
+            </button>
+        </div>
     </div>
 
-    <div class="datasets-grid">
+    <div class="datasets-grid" id="datasets-grid-container">
         {% for ds in datasets %}
-        <div class="dataset-card" id="dataset-{{ ds.dataset_id }}">
+        <div class="dataset-card" id="dataset-{{ ds.dataset_id }}" data-dataset-name="{{ ds.file_name | lower }}">
             <div class="dataset-card-header">
                 <div class="dataset-icon">
                     <i data-lucide="file-spreadsheet"></i>
@@ -102,6 +124,17 @@
             </div>
         </div>
         {% endfor %}
+    </div>
+
+    <!-- Empty Search Results State -->
+    <div id="dataset-no-search-results" class="empty-state glass-card" style="display: none; padding: 2.5rem; text-align: center; margin-top: 1rem;">
+        <div class="empty-icon"><i data-lucide="search-x"></i></div>
+        <h3>No matching datasets</h3>
+        <p>No dataset matched "<strong id="search-query-display"></strong>". Try a different filename or query.</p>
+        <button class="btn btn-secondary btn-sm" onclick="clearDatasetSearch()" style="margin-top: 0.75rem;">
+            <i data-lucide="rotate-ccw"></i>
+            <span>Clear Search</span>
+        </button>
     </div>
 
     {% else %}
@@ -607,6 +640,58 @@
         } catch (e) {
             showToast('Error: ' + e.message, 'error');
         }
+    }
+
+    // Real-time Dataset Search & Filtering
+    const datasetSearchInput = document.getElementById('dataset-search-input');
+    const clearDatasetSearchBtn = document.getElementById('btn-clear-dataset-search');
+    const noSearchResults = document.getElementById('dataset-no-search-results');
+    const countBadge = document.getElementById('datasets-count-badge');
+    const totalDatasets = {{ datasets | length if datasets else 0 }};
+
+    function filterDatasets(query) {
+        const q = (query || '').trim().toLowerCase();
+        const cards = document.querySelectorAll('.datasets-grid .dataset-card');
+        let visibleCount = 0;
+
+        cards.forEach(card => {
+            const name = card.getAttribute('data-dataset-name') || '';
+            const text = card.innerText.toLowerCase();
+            const matches = !q || name.includes(q) || text.includes(q);
+            card.style.display = matches ? '' : 'none';
+            if (matches) visibleCount++;
+        });
+
+        if (clearDatasetSearchBtn) {
+            clearDatasetSearchBtn.style.display = q ? 'inline-flex' : 'none';
+        }
+
+        if (noSearchResults) {
+            noSearchResults.style.display = (visibleCount === 0 && totalDatasets > 0) ? 'block' : 'none';
+            const querySpan = document.getElementById('search-query-display');
+            if (querySpan) querySpan.innerText = query;
+        }
+
+        if (countBadge) {
+            countBadge.innerText = q ? `${visibleCount} of ${totalDatasets}` : `${totalDatasets}`;
+        }
+        
+        lucide.createIcons();
+    }
+
+    function clearDatasetSearch() {
+        if (datasetSearchInput) {
+            datasetSearchInput.value = '';
+            filterDatasets('');
+            datasetSearchInput.focus();
+        }
+    }
+
+    if (datasetSearchInput) {
+        datasetSearchInput.addEventListener('input', (e) => filterDatasets(e.target.value));
+    }
+    if (clearDatasetSearchBtn) {
+        clearDatasetSearchBtn.addEventListener('click', clearDatasetSearch);
     }
 </script>
 {% endblock %}
