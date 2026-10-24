@@ -78,10 +78,12 @@
                 <h1>{% block page_title %}Dashboard{% endblock %}</h1>
             </div>
             <div class="top-bar-actions">
+                {% block copilot_header_button %}
                 <button type="button" class="btn btn-copilot-header" id="btn-copilot-header" onclick="toggleCopilot()" title="Ask DataWhale Copilot" aria-label="Ask Copilot" aria-expanded="false" aria-controls="dashboard-copilot-card">
                     <span class="copilot-header-sparkle">✦</span>
                     <span class="copilot-header-text">Ask Copilot</span>
                 </button>
+                {% endblock %}
                 {% block top_actions %}{% endblock %}
             </div>
         </header>
