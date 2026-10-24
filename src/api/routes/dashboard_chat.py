@@ -37,7 +37,11 @@ async def chat_dashboard(request: DashboardChatRequest):
     assistant = _get_assistant()
     try:
         history_list = [h.model_dump() for h in request.history]
-        result = await assistant.ask(request.message, history=history_list)
+        result = await assistant.ask(
+            request.message,
+            history=history_list,
+            active_dataset_id=request.dataset_id,
+        )
         return DashboardChatResponse(
             reply=result["reply"],
             suggested_actions=result.get("suggested_actions", []),

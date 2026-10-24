@@ -142,6 +142,7 @@ class DashboardAssistantAgent:
         self,
         question: str,
         history: list[dict[str, str]] | None = None,
+        active_dataset_id: str | None = None,
     ) -> dict[str, Any]:
         """
         Process a user question about the dashboard, datasets, or platform.
@@ -150,6 +151,24 @@ class DashboardAssistantAgent:
         ctx = self.get_workspace_context()
         context_text = self._format_context_text(ctx)
         history = history or []
+
+        # Find active dataset if opened from Analyze Studio
+        active_dataset = None
+        if active_dataset_id:
+            for ds in ctx["datasets"]:
+                if ds["dataset_id"] == active_dataset_id:
+                    active_dataset = ds
+                    break
+
+        if active_dataset:
+            context_text += (
+                f"\n\n## Current User Focus (Analyze Studio):\n"
+                f"The user is actively inspecting dataset '{active_dataset['file_name']}' (ID: `{active_dataset['dataset_id']}`).\n"
+                f"- Rows: {active_dataset['rows']:,}, Columns: {active_dataset['columns']}\n"
+                f"- Missing columns: {active_dataset['missing_columns']}\n"
+                f"- Sample columns: {', '.join(active_dataset['columns_sample'][:8])}\n"
+                f"Prioritize insights, data quality evaluations, and analysis suggestions for this active dataset."
+            )
 
         # First attempt: Try LLM
         reply_text = None
@@ -186,7 +205,9 @@ class DashboardAssistantAgent:
             reply_text = self._deterministic_fallback_answer(question, ctx)
 
         # Build dynamic suggested actions & quick replies
-        suggested_actions = self._generate_suggested_actions(question, ctx, reply_text)
+        suggested_actions = self._generate_suggested_actions(
+            question, ctx, reply_text, active_dataset=active_dataset
+        )
         quick_replies = self._generate_quick_replies(ctx)
 
         return {
@@ -358,15 +379,34 @@ class DashboardAssistantAgent:
 
 
     def _generate_suggested_actions(
-        self, question: str, ctx: dict[str, Any], reply: str
+        self,
+        question: str,
+        ctx: dict[str, Any],
+        reply: str,
+        active_dataset: dict[str, Any] | None = None,
     ) -> list[dict[str, str]]:
         """Generate smart quick-navigation action buttons based on the user's inquiry."""
         actions: list[dict[str, str]] = []
         q = question.lower()
         datasets = ctx["datasets"]
 
+        # If user is in Analyze Studio, prioritize the active dataset
+        if active_dataset:
+            actions.append({
+                "label": f"Run Studio ({active_dataset['file_name'][:18]})",
+                "url": f"/analysis/{active_dataset['dataset_id']}",
+                "icon": "zap",
+            })
+            actions.append({
+                "label": "Studio Data Chat",
+                "url": f"/analysis/{active_dataset['dataset_id']}?tab=chat",
+                "icon": "message-circle",
+            })
+
         # Check if user mentioned a specific dataset
         for ds in datasets:
+            if active_dataset and ds["dataset_id"] == active_dataset["dataset_id"]:
+                continue
             file_stem = Path(ds["file_name"]).stem.lower()
             stem_keywords = [w for w in re.split(r'[_ -]+', file_stem) if len(w) >= 4 and not w.isdigit()]
             if (
@@ -376,12 +416,12 @@ class DashboardAssistantAgent:
                 or any(k in q for k in stem_keywords)
             ):
                 actions.append({
-                    "label": f"Analyze Studio ({ds['file_name'][:20]})",
+                    "label": f"Analyze Studio ({ds['file_name'][:18]})",
                     "url": f"/analysis/{ds['dataset_id']}",
                     "icon": "zap",
                 })
                 actions.append({
-                    "label": f"SQL Chat ({ds['file_name'][:20]})",
+                    "label": f"SQL Chat ({ds['file_name'][:18]})",
                     "url": f"/chat/{ds['dataset_id']}",
                     "icon": "message-circle",
                 })

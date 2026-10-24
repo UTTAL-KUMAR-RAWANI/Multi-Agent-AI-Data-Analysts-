@@ -174,10 +174,12 @@ async def reports_page(request: Request):
 async def health_check():
     """Health check endpoint."""
     settings = get_settings()
+    providers = [p.value for p in settings.available_providers if p.value != "gemini"]
     return {
         "status": "healthy",
         "version": "0.1.0",
-        "providers": [p.value for p in settings.available_providers],
+        "default_provider": settings.default_llm_provider.value,
+        "providers": providers,
         "datasets_loaded": len(list_datasets()),
     }
 

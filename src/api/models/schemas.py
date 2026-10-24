@@ -78,6 +78,7 @@ class DashboardChatRequest(BaseModel):
     """Request to ask the dashboard assistant a question."""
     message: str = Field(..., description="User question about the dashboard, datasets, or agents")
     history: list[DashboardChatMessage] = Field(default_factory=list, description="Conversation history")
+    dataset_id: str | None = Field(default=None, description="Active dataset context ID if opened from Analyze Studio")
 
 
 class DashboardActionLink(BaseModel):

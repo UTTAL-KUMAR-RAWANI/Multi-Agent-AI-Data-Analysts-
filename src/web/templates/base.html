@@ -62,8 +62,8 @@
 
         <div class="sidebar-footer">
             <div class="provider-badge" id="provider-badge">
-                <div class="provider-dot"></div>
-                <span>Loading...</span>
+                <div class="provider-dot provider-dot-active"></div>
+                <span>llamafile</span>
             </div>
         </div>
     </nav>
@@ -78,6 +78,10 @@
                 <h1>{% block page_title %}Dashboard{% endblock %}</h1>
             </div>
             <div class="top-bar-actions">
+                <button type="button" class="btn btn-copilot-header" id="btn-copilot-header" onclick="toggleCopilot()" title="Ask DataWhale Copilot" aria-label="Ask Copilot" aria-expanded="false" aria-controls="dashboard-copilot-card">
+                    <span class="copilot-header-sparkle">✦</span>
+                    <span class="copilot-header-text">Ask Copilot</span>
+                </button>
                 {% block top_actions %}{% endblock %}
             </div>
         </header>
@@ -86,6 +90,89 @@
             {% block content %}{% endblock %}
         </div>
     </main>
+
+    <!-- Global Right-Side AI Copilot Sidebar Backdrop -->
+    <div class="copilot-sidebar-backdrop" id="copilot-sidebar-backdrop" onclick="closeCopilot()" aria-hidden="true"></div>
+
+    <!-- Global Right-Side AI Copilot Sidebar Panel -->
+    <aside class="copilot-sidebar-panel dashboard-copilot-card" id="dashboard-copilot-card" role="dialog" aria-modal="true" aria-label="DataWhale AI Copilot">
+        <div class="copilot-header">
+            <div class="copilot-title-group">
+                <div class="copilot-avatar">
+                    <i data-lucide="bot"></i>
+                    <div class="copilot-status-dot" title="Copilot connected to live workspace"></div>
+                </div>
+                <div class="copilot-title-text">
+                    <h3>
+                        <span>Ask Copilot</span>
+                        <span class="badge-copilot">Live</span>
+                    </h3>
+                    <p>Your AI data assistant</p>
+                </div>
+            </div>
+            <div class="copilot-controls">
+                <button type="button" class="copilot-btn-icon" id="btn-copilot-clear" onclick="clearCopilot()" title="Reset Conversation" aria-label="Reset Conversation">
+                    <i data-lucide="rotate-ccw"></i>
+                </button>
+                <button type="button" class="copilot-btn-icon" id="btn-copilot-close" onclick="closeCopilot()" title="Close Copilot (Esc)" aria-label="Close Copilot">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="copilot-body" id="copilot-body">
+            <div class="copilot-messages" id="copilot-messages">
+                <!-- Welcome Message -->
+                <div class="copilot-msg assistant">
+                    <div class="copilot-msg-avatar">
+                        <i data-lucide="brain-circuit"></i>
+                    </div>
+                    <div class="copilot-msg-content">
+                        <div class="copilot-msg-header">
+                            <span class="copilot-msg-sender">DataWhale Copilot</span>
+                        </div>
+                        <div class="copilot-msg-bubble">
+                            <p>Hello! I'm your <strong>DataWhale Copilot</strong>. I have real-time visibility into all loaded datasets, system health, and the 9 specialized AI agents.</p>
+                            <p style="margin-top: 6px;">Ask me anything about your data, missing values, statistical tests, or click one of these quick prompts:</p>
+                            <div class="copilot-chips-row" id="copilot-quick-chips">
+                                <button type="button" class="copilot-chip" onclick="askCopilot('Summarize all my loaded datasets')">
+                                    <i data-lucide="sparkles"></i> Summarize all datasets
+                                </button>
+                                <button type="button" class="copilot-chip" onclick="askCopilot('Which datasets have missing values or quality issues?')">
+                                    <i data-lucide="scan-search"></i> Check missing data
+                                </button>
+                                <button type="button" class="copilot-chip" onclick="askCopilot('What do the 9 AI specialist agents do?')">
+                                    <i data-lucide="network"></i> Explain AI agents
+                                </button>
+                                <button type="button" class="copilot-chip" onclick="askCopilot('How do I run an analysis in Studio?')">
+                                    <i data-lucide="zap"></i> How to run Studio analysis
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input Area Fixed at Bottom -->
+            <div class="copilot-input-area">
+                <div class="copilot-input-container">
+                    <textarea id="copilot-input" class="copilot-textarea"
+                        placeholder="Ask anything about your dashboard, datasets, or agents... (e.g. 'Which dataset has the most rows?')"
+                        rows="1"></textarea>
+                    <button type="button" class="copilot-send-btn" id="btn-copilot-send" onclick="sendCopilotMessage()"
+                        title="Send question" aria-label="Send question">
+                        <i data-lucide="send-horizontal"></i>
+                    </button>
+                </div>
+                <div class="copilot-footer-hints">
+                    <span>Press <kbd>Enter</kbd> to send • <kbd>Shift+Enter</kbd> for new line</span>
+                    <span class="copilot-badge-live">● Live Connected</span>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    {% block floating_widgets %}{% endblock %}
 
     <!-- Toast Container -->
     <div class="toast-container" id="toast-container"></div>
