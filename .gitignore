@@ -43,3 +43,6 @@ llamafile*
 # Logs
 *.log
 logs/
+
+# Scratch & Test Scripts
+scratch/
